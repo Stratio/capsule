@@ -1,5 +1,5 @@
 # Current Operator version
-VERSION ?= $$(git describe --abbrev=0 --tags)
+VERSION ?= $(shell cat VERSION)
 
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/clastix/capsule:$(VERSION)-bundle
@@ -153,3 +153,7 @@ e2e/%:
 		./charts/capsule
 	ginkgo -v -tags e2e ./e2e
 	kind delete cluster --name capsule
+
+# Stratio CICD flow
+change-version:
+	@echo $(VERSION) > VERSION
