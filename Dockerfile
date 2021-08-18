@@ -35,6 +35,14 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on go build \
 FROM alpine:3.11
 WORKDIR /
 COPY --from=builder /workspace/manager .
-USER nonroot:nonroot
+
+# add new user
+ARG USER=nonroot
+ENV HOME /home/$USER
+RUN adduser -D $USER \
+        && mkdir -p /etc/sudoers.d \
+        && echo "$USER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$USER \
+        && chmod 0440 /etc/sudoers.d/$USER
+USER $USER:$USER
 
 ENTRYPOINT ["/manager"]
