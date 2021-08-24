@@ -19,6 +19,7 @@ package webhook
 import (
 	"context"
 	"io/ioutil"
+	"time"
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -30,8 +31,8 @@ import (
 func Register(mgr controllerruntime.Manager, webhookList ...Webhook) error {
 	// skipping webhook setup if certificate is missing
 	dat, _ := ioutil.ReadFile("/tmp/k8s-webhook-server/serving-certs/tls.crt")
-	if len(dat) == 0 {
-		return nil
+	for len(dat) == 0 {
+		time.Sleep(20 * time.Second)
 	}
 
 	s := mgr.GetWebhookServer()
