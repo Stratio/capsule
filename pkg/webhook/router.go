@@ -28,19 +28,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-var (
-	setupLog = ctrl.Log.WithName("setup")
-)
-
 func Register(mgr controllerruntime.Manager, webhookList ...Webhook) error {
 	// skipping webhook setup if certificate is missing
-	for dat, _ := ioutil.ReadFile("/tmp/k8s-webhook-server/serving-certs/tls.crt") {
-		if len(dat) == 0 {
-			setupLog.Info("Waiting 20 seconds for tls.crt secret")
-			time.Sleep(20 * time.Second)
-		} else {
-			return nil
-		}
+	dat, _ := ioutil.ReadFile("/tmp/k8s-webhook-server/serving-certs/tls.crt")
+	if len(dat) == 0 {
+		return nil
 	}
 
 	s := mgr.GetWebhookServer()

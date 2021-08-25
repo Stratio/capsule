@@ -73,8 +73,11 @@ func (r TLSReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctr
 	var shouldCreate bool
 	for _, key := range []string{certSecretKey, privateKeySecretKey} {
 		if _, ok := instance.Data[key]; !ok {
+			r.Log.Info("[TESTING] No encuentro los secretos del cert, seteo shouldCreate")
 			shouldCreate = true
 			break
+		} else {
+			r.Log.Info("[TESTING] Encuentro los secretos del cert")
 		}
 	}
 
@@ -94,6 +97,7 @@ func (r TLSReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctr
 			privateKeySecretKey: key.Bytes(),
 		}
 	} else {
+		r.Log.Info("[TESTING] Como los he encontrado, los decodifico y leo")
 		var c *x509.Certificate
 		var b *pem.Block
 		b, _ = pem.Decode(instance.Data[certSecretKey])
@@ -115,6 +119,7 @@ func (r TLSReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctr
 	var res controllerutil.OperationResult
 	t := &corev1.Secret{ObjectMeta: instance.ObjectMeta}
 	res, err = controllerutil.CreateOrUpdate(ctx, r.Client, t, func() error {
+		r.Log.Info("[TESTING] Creo/actualizo los secretos")
 		t.Data = instance.Data
 		return nil
 	})
