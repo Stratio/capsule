@@ -128,8 +128,8 @@ func (r TLSReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctr
 		return reconcile.Result{}, err
 	}
 
-	if instance.Name == tlsSecretName && res == controllerutil.OperationResultUpdated {
-		r.Log.Info("Capsule TLS certificates has been updated, we need to restart the Controller")
+	if instance.Name == tlsSecretName && (res == controllerutil.OperationResultUpdated || res == controllerutil.OperationResultCreated) {
+		r.Log.Info("Capsule TLS certificates has been created or updated, we need to restart the Controller")
 		_ = syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 	}
 
