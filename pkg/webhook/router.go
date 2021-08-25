@@ -19,7 +19,6 @@ package webhook
 import (
 	"context"
 	"io/ioutil"
-	"time"
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	controllerruntime "sigs.k8s.io/controller-runtime"
