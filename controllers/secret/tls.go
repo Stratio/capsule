@@ -1,18 +1,5 @@
-/*
-Copyright 2020 Clastix Labs.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2020-2021 Clastix Labs
+// SPDX-License-Identifier: Apache-2.0
 
 package secret
 
@@ -21,12 +8,14 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
-	"syscall"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -82,7 +71,7 @@ func (r TLSReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctr
 		r.Log.Info("Missing Capsule TLS certificate")
 		rq = 6 * 30 * 24 * time.Hour
 
-		opts := cert.NewCertOpts(time.Now().Add(rq), "capsule-webhook-service.capsule-system.svc")
+		opts := cert.NewCertOpts(time.Now().Add(rq), fmt.Sprintf("capsule-webhook-service.%s.svc", r.Namespace))
 		var crt, key *bytes.Buffer
 		crt, key, err = ca.GenerateCertificate(opts)
 		if err != nil {
@@ -124,8 +113,38 @@ func (r TLSReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctr
 	}
 
 	if instance.Name == tlsSecretName && res == controllerutil.OperationResultUpdated {
-		r.Log.Info("Capsule TLS certificates has been updated, we need to restart the Controller")
-		_ = syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+		r.Log.Info("Capsule TLS certificates has been updated, Controller pods must be restarted to load new certificate")
+
+		hostname, _ := os.Hostname()
+		leaderPod := &corev1.Pod{}
+		if err = r.Client.Get(ctx, types.NamespacedName{Namespace: os.Getenv("NAMESPACE"), Name: hostname}, leaderPod); err != nil {
+			r.Log.Error(err, "cannot retrieve the leader Pod, probably running in out of the cluster mode")
+
+			return reconcile.Result{}, nil
+		}
+
+		podList := &corev1.PodList{}
+		if err = r.Client.List(ctx, podList, client.MatchingLabels(leaderPod.ObjectMeta.Labels)); err != nil {
+			r.Log.Error(err, "cannot retrieve list of Capsule pods requiring restart upon TLS update")
+
+			return reconcile.Result{}, nil
+		}
+
+		for _, p := range podList.Items {
+			nonLeaderPod := p
+			// Skipping this Pod, must be deleted at the end
+			if nonLeaderPod.GetName() == leaderPod.GetName() {
+				continue
+			}
+
+			if err = r.Client.Delete(ctx, &nonLeaderPod); err != nil {
+				r.Log.Error(err, "cannot delete the non-leader Pod due to TLS update")
+			}
+		}
+
+		if err = r.Client.Delete(ctx, leaderPod); err != nil {
+			r.Log.Error(err, "cannot delete the leader Pod due to TLS update")
+		}
 	}
 
 	r.Log.Info("Reconciliation completed, processing back in " + rq.String())
