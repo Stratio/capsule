@@ -40,6 +40,7 @@ Use Capsule to address any of the following scenarios:
 * [Cordon Tenants](./cordoning-tenant.md)
 * [Disable Service Types](./service-type.md)
 * [Taint Services](./taint-services.md)
+* [Allow adding labels and annotations on namespaces](./namespace-labels-and-annotations.md)
 * [Velero Backup Restoration](./velero-backup-restoration.md)
 * [Deny Wildcard Hostnames](./deny-wildcard-hostnames.md)
 
