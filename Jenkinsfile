@@ -9,7 +9,6 @@ hose {
     NEW_VERSIONING = 'true'
     DEVTIMEOUT = 30
     ANCHORE_POLICY = "production"
-    ANCHORE_TEST = true
 
     DEV = { config ->
         doDocker(config)
