@@ -1,7 +1,6 @@
 # Build the manager binary
 FROM golang:1.16 as builder
 
-ARG TARGETARCH
 ARG GIT_HEAD_COMMIT
 ARG GIT_TAG_COMMIT
 ARG GIT_LAST_TAG
@@ -25,14 +24,17 @@ COPY controllers/ controllers/
 COPY pkg/ pkg/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on go build \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
         -gcflags "-N -l" \
         -ldflags "-X main.GitRepo=$GIT_REPO -X main.GitTag=$GIT_LAST_TAG -X main.GitCommit=$GIT_HEAD_COMMIT -X main.GitDirty=$GIT_MODIFIED -X main.BuildTime=$BUILD_DATE" \
         -o manager
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM alpine:3.11
+FROM alpine:3.13
+# Upgrade packages for vulnerabilities
+RUN apk update && apk upgrade
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
 
@@ -46,3 +48,4 @@ RUN adduser -D $USER \
 USER $USER:$USER
 
 ENTRYPOINT ["/manager"]
+
