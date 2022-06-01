@@ -156,4 +156,4 @@ e2e/%:
 
 # Stratio CICD flow
 change-version:
-	@echo $(VERSION) > VERSION
+	bin/change-version.sh $(version)
