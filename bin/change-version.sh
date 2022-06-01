@@ -12,6 +12,6 @@ else
 	VERSION=$1
 fi
 
-echo "Modifying KEOS installer version to: $VERSION"
+echo "Modifying Capsule version to: $VERSION"
 
 echo "$VERSION" > VERSION
