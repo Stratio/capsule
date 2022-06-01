@@ -2,7 +2,7 @@
 
 ## 0.2.0 (upcoming)
 
-* Pending changelog
+* [EOS-6302] Bump Capsule upstream version to v0.1.0
 
 ## 0.1.0-dc4e760 (Built: September 15, 2021 | Released: December 15, 2021)
 
