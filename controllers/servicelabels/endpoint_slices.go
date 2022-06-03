@@ -14,8 +14,8 @@ type EndpointSlicesLabelsReconciler struct {
 	abstractServiceLabelsReconciler
 
 	Log          logr.Logger
-	VersionMinor uint
-	VersionMajor uint
+	VersionMinor int
+	VersionMajor int
 }
 
 func (r *EndpointSlicesLabelsReconciler) SetupWithManager(mgr ctrl.Manager) error {

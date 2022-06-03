@@ -7,6 +7,7 @@ package e2e
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/gomega"
@@ -14,7 +15,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	versionUtil "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 
@@ -50,14 +50,6 @@ func TenantNamespaceList(t *capsulev1beta1.Tenant, timeout time.Duration) AsyncA
 	}, timeout, defaultPollInterval)
 }
 
-func ModifyNode(fn func(node *corev1.Node) error) error {
-	nodeList := &corev1.NodeList{}
-
-	Expect(k8sClient.List(context.Background(), nodeList)).ToNot(HaveOccurred())
-
-	return fn(&nodeList.Items[0])
-}
-
 func EventuallyCreation(f interface{}) AsyncAssertion {
 	return Eventually(f, defaultTimeoutInterval, defaultPollInterval)
 }
@@ -70,7 +62,7 @@ func ModifyCapsuleConfigurationOpts(fn func(configuration *capsulev1alpha1.Capsu
 
 	Expect(k8sClient.Update(context.Background(), config)).ToNot(HaveOccurred())
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(time.Second)
 }
 
 func KindInTenantRoleBindingAssertions(ns *corev1.Namespace, timeout time.Duration) (out []AsyncAssertion) {
@@ -90,21 +82,21 @@ func KindInTenantRoleBindingAssertions(ns *corev1.Namespace, timeout time.Durati
 	return
 }
 
-func GetKubernetesVersion() *versionUtil.Version {
-	var serverVersion *version.Info
+func GetKubernetesSemVer() (major, minor int, ver string) {
+	var v *version.Info
 	var err error
 	var cs kubernetes.Interface
-	var ver *versionUtil.Version
 
 	cs, err = kubernetes.NewForConfig(cfg)
 	Expect(err).ToNot(HaveOccurred())
 
-	serverVersion, err = cs.Discovery().ServerVersion()
+	v, err = cs.Discovery().ServerVersion()
 	Expect(err).ToNot(HaveOccurred())
-
-	ver, err = versionUtil.ParseGeneric(serverVersion.String())
+	major, err = strconv.Atoi(v.Major)
 	Expect(err).ToNot(HaveOccurred())
+	minor, err = strconv.Atoi(v.Minor)
+	Expect(err).ToNot(HaveOccurred())
+	ver = v.String()
 
-
-	return ver
+	return
 }
