@@ -1,7 +1,3 @@
-// Copyright 2020-2021 Clastix Labs
-// SPDX-License-Identifier: Apache-2.0
-
-//nolint:dupl
 package tenant
 
 import (
@@ -53,20 +49,10 @@ func (r *Manager) syncNamespaceMetadata(namespace string, tnt *capsulev1beta1.Te
 
 		res, conflictErr = controllerutil.CreateOrUpdate(context.TODO(), r.Client, ns, func() error {
 			annotations := make(map[string]string)
-			labels := map[string]string{
-				"name":       namespace,
-				capsuleLabel: tnt.GetName(),
-			}
 
 			if tnt.Spec.NamespaceOptions != nil && tnt.Spec.NamespaceOptions.AdditionalMetadata != nil {
 				for k, v := range tnt.Spec.NamespaceOptions.AdditionalMetadata.Annotations {
 					annotations[k] = v
-				}
-			}
-
-			if tnt.Spec.NamespaceOptions != nil && tnt.Spec.NamespaceOptions.AdditionalMetadata != nil {
-				for k, v := range tnt.Spec.NamespaceOptions.AdditionalMetadata.Labels {
-					labels[k] = v
 				}
 			}
 
@@ -105,37 +91,20 @@ func (r *Manager) syncNamespaceMetadata(namespace string, tnt *capsulev1beta1.Te
 				}
 			}
 
-			if value, ok := tnt.Annotations[capsulev1beta1.ForbiddenNamespaceLabelsAnnotation]; ok {
-				annotations[capsulev1beta1.ForbiddenNamespaceLabelsAnnotation] = value
+			ns.SetAnnotations(annotations)
+
+			newLabels := map[string]string{
+				"name":       namespace,
+				capsuleLabel: tnt.GetName(),
 			}
 
-			if value, ok := tnt.Annotations[capsulev1beta1.ForbiddenNamespaceLabelsRegexpAnnotation]; ok {
-				annotations[capsulev1beta1.ForbiddenNamespaceLabelsRegexpAnnotation] = value
-			}
-
-			if value, ok := tnt.Annotations[capsulev1beta1.ForbiddenNamespaceAnnotationsAnnotation]; ok {
-				annotations[capsulev1beta1.ForbiddenNamespaceAnnotationsAnnotation] = value
-			}
-
-			if value, ok := tnt.Annotations[capsulev1beta1.ForbiddenNamespaceAnnotationsRegexpAnnotation]; ok {
-				annotations[capsulev1beta1.ForbiddenNamespaceAnnotationsRegexpAnnotation] = value
-			}
-
-			if ns.Annotations == nil {
-				ns.SetAnnotations(annotations)
-			} else {
-				for k, v := range annotations {
-					ns.Annotations[k] = v
+			if tnt.Spec.NamespaceOptions != nil && tnt.Spec.NamespaceOptions.AdditionalMetadata != nil {
+				for k, v := range tnt.Spec.NamespaceOptions.AdditionalMetadata.Labels {
+					newLabels[k] = v
 				}
 			}
 
-			if ns.Labels == nil {
-				ns.SetLabels(labels)
-			} else {
-				for k, v := range labels {
-					ns.Labels[k] = v
-				}
-			}
+			ns.SetLabels(newLabels)
 
 			return nil
 		})
