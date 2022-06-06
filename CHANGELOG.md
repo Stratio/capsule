@@ -1,6 +1,10 @@
 # Changelog
 
-## v0.1.0-0.2.0 (upcoming)
+## 0.1.1-0.3.0 (upcoming)
+
+* [EOS-6302] Bump Capsule upstream version to v0.1.1
+
+## v0.1.0-0.2.0 (Built: June 1, 2022)
 
 * [EOS-6302] Bump Capsule upstream version to v0.1.0
 * [EOS-6302] Change versioning type to upstreamVersion-stratioVersion
