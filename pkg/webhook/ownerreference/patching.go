@@ -27,12 +27,14 @@ import (
 )
 
 type handler struct {
-	cfg configuration.Configuration
+	cfg             configuration.Configuration
+	capsuleUserName string
 }
 
-func Handler(cfg configuration.Configuration) capsulewebhook.Handler {
+func Handler(cfg configuration.Configuration, capsuleUserName string) capsulewebhook.Handler {
 	return &handler{
-		cfg: cfg,
+		cfg:             cfg,
+		capsuleUserName: capsuleUserName,
 	}
 }
 
@@ -78,7 +80,7 @@ func (h *handler) setOwnerRef(ctx context.Context, req admission.Request, client
 			return &response
 		}
 		// Tenant owner must adhere to user that asked for NS creation
-		if !utils.IsTenantOwner(tnt.Spec.Owners, req.UserInfo) {
+		if !utils.IsTenantOwner(tnt.Spec.Owners, req.UserInfo) && req.UserInfo.Username != h.capsuleUserName {
 			recorder.Eventf(tnt, corev1.EventTypeWarning, "NonOwnedTenant", "Namespace %s cannot be assigned to the current Tenant", ns.GetName())
 
 			response := admission.Denied("Cannot assign the desired namespace to a non-owned Tenant")
