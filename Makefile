@@ -209,3 +209,6 @@ e2e/%:
 # Stratio CICD flow
 change-version:
 	bin/change-version.sh $(version)
+
+chart:
+	bin/chart.sh $(version)
