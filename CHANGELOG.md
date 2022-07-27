@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.1.1-0.3.0 (upcoming)
+## 0.1.1-0.4.0 (upcoming)
+
+* Upcoming changelog
+
+## 0.1.1-0.3.0 (Built: July 27, 2022)
 
 * [EOS-6302] Bump Capsule upstream version to v0.1.1
 
