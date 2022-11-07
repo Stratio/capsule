@@ -145,12 +145,6 @@ func (h *handler) setOwnerRef(ctx context.Context, req admission.Request, client
 		return &response
 	}
 
-	if len(tenants) == 1 {
-		response := h.patchResponseForOwnerRef(&tenants[0], ns, recorder)
-
-		return &response
-	}
-
 	if h.cfg.ForceTenantPrefix() {
 		for _, tnt := range tenants {
 			if strings.HasPrefix(ns.GetName(), fmt.Sprintf("%s-", tnt.GetName())) {
@@ -160,6 +154,12 @@ func (h *handler) setOwnerRef(ctx context.Context, req admission.Request, client
 			}
 		}
 		response := admission.Denied("The Namespace prefix used doesn't match any available Tenant")
+
+		return &response
+	}
+
+	if len(tenants) == 1 {
+		response := h.patchResponseForOwnerRef(&tenants[0], ns, recorder)
 
 		return &response
 	}

@@ -2,9 +2,8 @@
 
 ## 0.1.1-0.3.0 (2022-07-27)
 
-
+* [EOS-10241] Avoid namespace-tenant auto-assignment
 * [EOS-6302] Bump Capsule upstream version to v0.1.1
-
 
 ## Previous development
 
