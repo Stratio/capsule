@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.1-0.3.1 (upcoming)
+## 0.1.1-0.3.1 (2022-11-08)
 
 * [EOS-10241] Avoid namespace-tenant auto-assignment
 
