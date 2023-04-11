@@ -2,7 +2,7 @@
 
 ## 0.1.1-0.4.0 (upcoming)
 
-* Upcoming changelog
+* [EOS-5809] Refactor chart tag default value to ensure chart uncoupling
 
 ## 0.1.1-0.3.0 (Built: July 27, 2022)
 
