@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1-0.3.2 (upcoming)
+
+* [EOS-5809] Refactor chart tag default value to ensure chart uncoupling
+
 ## 0.1.1-0.3.1 (2022-11-08)
 
 * [EOS-10241] Avoid namespace-tenant auto-assignment
