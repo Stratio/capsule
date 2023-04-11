@@ -8,7 +8,7 @@ hose {
     VERSIONING_TYPE = 'stratioVersion-3-3'
     UPSTREAM_VERSION = '0.1.3'
     DEPLOYONPRS = true
-    GRYPE_TEST = false 
+    GRYPE_TEST = true
 
     DEV = { config ->
         doDocker(conf:config, image:'capsule')
