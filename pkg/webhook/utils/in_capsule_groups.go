@@ -14,21 +14,23 @@ import (
 	"github.com/clastix/capsule/pkg/webhook"
 )
 
-func InCapsuleGroups(configuration configuration.Configuration, handlers ...webhook.Handler) webhook.Handler {
+func InCapsuleGroups(configuration configuration.Configuration, capsuleUserName string, handlers ...webhook.Handler) webhook.Handler {
 	return &handler{
-		configuration: configuration,
-		handlers:      handlers,
+		configuration:   configuration,
+		capsuleUserName: string,
+		handlers:        handlers,
 	}
 }
 
 type handler struct {
-	configuration configuration.Configuration
-	handlers      []webhook.Handler
+	configuration   configuration.Configuration
+	capsuleUserName string
+	handlers        []webhook.Handler
 }
 
 func (h *handler) OnCreate(client client.Client, decoder *admission.Decoder, recorder record.EventRecorder) webhook.Func {
 	return func(ctx context.Context, req admission.Request) *admission.Response {
-		if !IsCapsuleUser(ctx, req, client, h.configuration.UserGroups()) {
+		if !IsCapsuleUser(ctx, req, client, h.configuration.UserGroups(), h.capsuleUserName) {
 			return nil
 		}
 
@@ -44,7 +46,7 @@ func (h *handler) OnCreate(client client.Client, decoder *admission.Decoder, rec
 
 func (h *handler) OnDelete(client client.Client, decoder *admission.Decoder, recorder record.EventRecorder) webhook.Func {
 	return func(ctx context.Context, req admission.Request) *admission.Response {
-		if !IsCapsuleUser(ctx, req, client, h.configuration.UserGroups()) {
+		if !IsCapsuleUser(ctx, req, client, h.configuration.UserGroups(), h.capsuleUserName) {
 			return nil
 		}
 
@@ -60,7 +62,7 @@ func (h *handler) OnDelete(client client.Client, decoder *admission.Decoder, rec
 
 func (h *handler) OnUpdate(client client.Client, decoder *admission.Decoder, recorder record.EventRecorder) webhook.Func {
 	return func(ctx context.Context, req admission.Request) *admission.Response {
-		if !IsCapsuleUser(ctx, req, client, h.configuration.UserGroups()) {
+		if !IsCapsuleUser(ctx, req, client, h.configuration.UserGroups(), h.capsuleUserName) {
 			return nil
 		}
 

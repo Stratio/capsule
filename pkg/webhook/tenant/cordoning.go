@@ -22,11 +22,13 @@ import (
 
 type cordoningHandler struct {
 	configuration configuration.Configuration
+	capsuleUserName string
 }
 
-func CordoningHandler(configuration configuration.Configuration) capsulewebhook.Handler {
+func CordoningHandler(configuration configuration.Configuration, capsuleUserName string) capsulewebhook.Handler {
 	return &cordoningHandler{
 		configuration: configuration,
+		capsuleUserName: capsuleUserName,
 	}
 }
 
@@ -44,7 +46,7 @@ func (h *cordoningHandler) cordonHandler(ctx context.Context, clt client.Client,
 	}
 
 	tnt := tntList.Items[0]
-	if tnt.IsCordoned() && utils.IsCapsuleUser(ctx, req, clt, h.configuration.UserGroups()) {
+	if tnt.IsCordoned() && utils.IsCapsuleUser(ctx, req, clt, h.configuration.UserGroups(), h.capsuleUserName) {
 		recorder.Eventf(&tnt, corev1.EventTypeWarning, "TenantFreezed", "%s %s/%s cannot be %sd, current Tenant is freezed", req.Kind.String(), req.Namespace, req.Name, strings.ToLower(string(req.Operation)))
 
 		response := admission.Denied(fmt.Sprintf("tenant %s is freezed: please, reach out to the system administrator", tnt.GetName()))

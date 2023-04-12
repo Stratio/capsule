@@ -207,15 +207,15 @@ func main() {
 	webhooksList := append(
 		make([]webhook.Webhook, 0),
 		route.Pod(pod.ImagePullPolicy(), pod.ContainerRegistry(), pod.PriorityClass()),
-		route.Namespace(utils.InCapsuleGroups(cfg, namespacewebhook.PatchHandler(), namespacewebhook.QuotaHandler(), namespacewebhook.FreezeHandler(cfg), namespacewebhook.PrefixHandler(cfg), namespacewebhook.UserMetadataHandler())),
+		route.Namespace(utils.InCapsuleGroups(cfg, capsuleUserName, namespacewebhook.PatchHandler(), namespacewebhook.QuotaHandler(), namespacewebhook.FreezeHandler(cfg, capsuleUserName), namespacewebhook.PrefixHandler(cfg), namespacewebhook.UserMetadataHandler())),
 		route.Ingress(ingress.Class(cfg), ingress.Hostnames(cfg), ingress.Collision(cfg), ingress.Wildcard()),
 		route.PVC(pvc.Handler()),
 		route.Service(service.Handler()),
-		route.NetworkPolicy(utils.InCapsuleGroups(cfg, networkpolicy.Handler())),
+		route.NetworkPolicy(utils.InCapsuleGroups(cfg, capsuleUserName, networkpolicy.Handler())),
 		route.Tenant(tenant.NameHandler(), tenant.RoleBindingRegexHandler(), tenant.IngressClassRegexHandler(), tenant.StorageClassRegexHandler(), tenant.ContainerRegistryRegexHandler(), tenant.HostnameRegexHandler(), tenant.FreezedEmitter(), tenant.ServiceAccountNameHandler(), tenant.ForbiddenAnnotationsRegexHandler(), tenant.ProtectedHandler()),
-		route.OwnerReference(utils.InCapsuleGroups(cfg, namespacewebhook.OwnerReferenceHandler(), ownerreference.Handler(cfg, capsuleUserName))),
-		route.Cordoning(tenant.CordoningHandler(cfg), tenant.ResourceCounterHandler()),
-		route.Node(utils.InCapsuleGroups(cfg, node.UserMetadataHandler(cfg, kubeVersion))),
+		route.OwnerReference(utils.InCapsuleGroups(cfg, capsuleUserName, namespacewebhook.OwnerReferenceHandler(), ownerreference.Handler(cfg, capsuleUserName))),
+		route.Cordoning(tenant.CordoningHandler(cfg, capsuleUserName), tenant.ResourceCounterHandler()),
+		route.Node(utils.InCapsuleGroups(cfg, capsuleUserName, node.UserMetadataHandler(cfg, kubeVersion))),
 	)
 
 	nodeWebhookSupported, _ := utils.NodeWebhookSupported(kubeVersion)

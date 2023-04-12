@@ -21,10 +21,14 @@ import (
 
 type freezedHandler struct {
 	configuration configuration.Configuration
+	capsuleUserName string
 }
 
-func FreezeHandler(configuration configuration.Configuration) capsulewebhook.Handler {
-	return &freezedHandler{configuration: configuration}
+func FreezeHandler(configuration configuration.Configuration, capsuleUserName string) capsulewebhook.Handler {
+	return &freezedHandler{
+		configuration: configuration,
+		capsuleUserName: capsuleUserName,
+	}
 }
 
 func (r *freezedHandler) OnCreate(client client.Client, decoder *admission.Decoder, recorder record.EventRecorder) capsulewebhook.Func {
@@ -69,7 +73,7 @@ func (r *freezedHandler) OnDelete(c client.Client, _ *admission.Decoder, recorde
 
 		tnt := tntList.Items[0]
 
-		if tnt.IsCordoned() && utils.IsCapsuleUser(ctx, req, c, r.configuration.UserGroups()) {
+		if tnt.IsCordoned() && utils.IsCapsuleUser(ctx, req, c, r.configuration.UserGroups(), h.capsuleUserName) {
 			recorder.Eventf(&tnt, corev1.EventTypeWarning, "TenantFreezed", "Namespace %s cannot be deleted, the current Tenant is freezed", req.Name)
 
 			response := admission.Denied("the selected Tenant is freezed")
@@ -101,7 +105,7 @@ func (r *freezedHandler) OnUpdate(c client.Client, decoder *admission.Decoder, r
 
 		tnt := tntList.Items[0]
 
-		if tnt.IsCordoned() && utils.IsCapsuleUser(ctx, req, c, r.configuration.UserGroups()) {
+		if tnt.IsCordoned() && utils.IsCapsuleUser(ctx, req, c, r.configuration.UserGroups(), h.capsuleUserName) {
 			recorder.Eventf(&tnt, corev1.EventTypeWarning, "TenantFreezed", "Namespace %s cannot be updated, the current Tenant is freezed", ns.GetName())
 
 			response := admission.Denied("the selected Tenant is freezed")
