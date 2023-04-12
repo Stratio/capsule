@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.1.3-0.4.0 (upcoming)
+## 0.1.3-0.4.1 (upcoming)
+
+* Upcoming changelog
+
+## 0.1.3-0.4.0 (Built: April 12, 2023)
 
 * [EOS-11174] Bump Capsule upstream version to v0.1.3 
 * [EOS-5809] Refactor chart tag default value to ensure chart uncoupling
