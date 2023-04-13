@@ -150,7 +150,7 @@ dev-setup:
 		]";
 
 # Build the docker image
-docker-build: test
+docker-build:
 	docker build . -t ${IMG} --build-arg GIT_HEAD_COMMIT=$(GIT_HEAD_COMMIT) \
  							 --build-arg GIT_TAG_COMMIT=$(GIT_TAG_COMMIT) \
  							 --build-arg GIT_MODIFIED=$(GIT_MODIFIED) \
