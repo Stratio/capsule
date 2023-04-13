@@ -17,7 +17,7 @@ import (
 func InCapsuleGroups(configuration configuration.Configuration, capsuleUserName string, handlers ...webhook.Handler) webhook.Handler {
 	return &handler{
 		configuration:   configuration,
-		capsuleUserName: string,
+		capsuleUserName: capsuleUserName,
 		handlers:        handlers,
 	}
 }
