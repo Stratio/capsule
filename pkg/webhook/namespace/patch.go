@@ -20,10 +20,14 @@ import (
 	"github.com/clastix/capsule/pkg/webhook/utils"
 )
 
-type patchHandler struct{}
+type patchHandler struct{
+	capsuleUserName string
+}
 
-func PatchHandler() capsulewebhook.Handler {
-	return &patchHandler{}
+func PatchHandler(capsuleUserName string) capsulewebhook.Handler {
+	return &patchHandler{
+		capsuleUserName: capsuleUserName,
+	}
 }
 
 func (r *patchHandler) OnCreate(client.Client, *admission.Decoder, record.EventRecorder) capsulewebhook.Func {
@@ -66,7 +70,7 @@ func (r *patchHandler) OnUpdate(c client.Client, decoder *admission.Decoder, rec
 				return &response
 			}
 
-			if !utils.IsTenantOwner(tnt.Spec.Owners, req.UserInfo) {
+			if !utils.IsTenantOwner(tnt.Spec.Owners, req.UserInfo, r.capsuleUserName) {
 				recorder.Eventf(tnt, corev1.EventTypeWarning, "NamespacePatch", e)
 				response := admission.Denied(e)
 
