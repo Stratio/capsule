@@ -36,6 +36,11 @@ spec:
           spec:
             description: CapsuleConfigurationSpec defines the Capsule configuration.
             properties:
+              excludeUserGroups:
+                description: Names of the groups for Capsule users.
+                items:
+                  type: string
+                type: array
               forceTenantPrefix:
                 default: false
                 description: Enforces the Tenant owner, during Namespace creation,

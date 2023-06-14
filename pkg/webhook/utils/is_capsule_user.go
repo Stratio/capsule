@@ -16,13 +16,13 @@ import (
 	"github.com/clastix/capsule/pkg/utils"
 )
 
-func IsCapsuleUser(ctx context.Context, req admission.Request, clt client.Client, userGroups []string) bool {
+func IsCapsuleUser(ctx context.Context, req admission.Request, clt client.Client, userGroups []string, excludeUserGroups []string) bool {
 	groupList := utils.NewUserGroupList(req.UserInfo.Groups)
-	// if the user is a ServiceAccount belonging to the kube-system namespace, definitely, it's not a Capsule user
-	// and we can skip the check in case of Capsule user group assigned to system:authenticated
-	// (ref: https://github.com/clastix/capsule/issues/234)
-	if groupList.Find("system:serviceaccounts:kube-system") {
-		return false
+
+	for _, group := range excludeUserGroups {
+		if groupList.Find(group) {
+			return false
+		}
 	}
 	//nolint:nestif
 	if sets.NewString(req.UserInfo.Groups...).Has("system:serviceaccounts") {
