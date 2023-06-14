@@ -2,6 +2,7 @@
 
 ## 0.1.3-0.4.0 (upcoming)
 
+* [EOS-11449] Add excludeUserGroups option
 * [EOS-11174] Bump Capsule upstream version to v0.1.3 
 * [EOS-5809] Refactor chart tag default value to ensure chart uncoupling
 * Ensure Capsule user is treated as a tenant owner
