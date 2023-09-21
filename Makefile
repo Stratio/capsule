@@ -278,7 +278,7 @@ e2e-destroy:
 
 # Stratio CICD flow
 change-version:
-	bin/change-version.sh $(version)
+	bin/change-version.sh $(VERSION)
 
 chart:
-	bin/chart.sh $(version)
+	bin/chart.sh $(VERSION)
