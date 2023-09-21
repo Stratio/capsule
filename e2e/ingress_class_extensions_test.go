@@ -7,39 +7,46 @@ package e2e
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	"github.com/clastix/capsule/pkg/api"
+	"github.com/clastix/capsule/pkg/utils"
 )
 
 var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ingress-class-extensions-v1beta1",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "ingress",
 					Kind: "User",
 				},
 			},
-			IngressOptions: capsulev1beta1.IngressOptions{
-				AllowedClasses: &capsulev1beta1.AllowedListSpec{
-					Exact: []string{
-						"nginx",
-						"haproxy",
+			IngressOptions: capsulev1beta2.IngressOptions{
+				AllowedClasses: &api.DefaultAllowedListSpec{
+					Default: "tenant-default",
+					SelectorAllowedListSpec: api.SelectorAllowedListSpec{
+						AllowedListSpec: api.AllowedListSpec{
+							Exact: []string{"nginx", "haproxy"},
+							Regex: "^oil-.*$",
+						},
+						LabelSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"env": "customers",
+							},
+						},
 					},
-					Regex: "^oil-.*$",
 				},
 			},
 		},
@@ -56,7 +63,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 	})
 
 	It("should block a non allowed class for extensions/v1beta1", func() {
-		ns := NewNamespace("ingress-class-disallowed-extensions-v1beta1")
+		ns := NewNamespace("")
 		cs := ownerClient(tnt.Spec.Owners[0])
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
@@ -64,8 +71,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 
 		By("non-specifying at all", func() {
 			if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}
@@ -88,8 +94,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 		})
 		By("defining as deprecated annotation", func() {
 			if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}
@@ -115,8 +120,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 		})
 		By("using the ingressClassName", func() {
 			if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}
@@ -127,7 +131,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 						Name: "denied-ingress",
 					},
 					Spec: extensionsv1beta1.IngressSpec{
-						IngressClassName: pointer.StringPtr("the-worst-ingress-available"),
+						IngressClassName: pointer.String("the-worst-ingress-available"),
 						Backend: &extensionsv1beta1.IngressBackend{
 							ServiceName: "foo",
 							ServicePort: intstr.FromInt(8080),
@@ -141,7 +145,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 	})
 
 	It("should allow enabled class using the deprecated annotation", func() {
-		ns := NewNamespace("ingress-class-allowed-annotation-extensions-v1beta1")
+		ns := NewNamespace("")
 		cs := ownerClient(tnt.Spec.Owners[0])
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
@@ -150,8 +154,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 		for _, c := range tnt.Spec.IngressOptions.AllowedClasses.Exact {
 			Eventually(func() (err error) {
 				if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-					missingAPIError := &meta.NoKindMatchError{}
-					if errors.As(err, &missingAPIError) {
+					if utils.IsUnsupportedAPI(err) {
 						Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 					}
 				}
@@ -178,8 +181,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 
 	It("should allow enabled class using the ingressClassName field", func() {
 		if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-			missingAPIError := &meta.NoKindMatchError{}
-			if errors.As(err, &missingAPIError) {
+			if utils.IsUnsupportedAPI(err) {
 				Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 			}
 		}
@@ -188,7 +190,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 			Skip("Running test on Kubernetes " + version.String() + ", doesn't provide .spec.ingressClassName")
 		}
 
-		ns := NewNamespace("ingress-class-allowed-annotation-extensions-v1beta1")
+		ns := NewNamespace("")
 		cs := ownerClient(tnt.Spec.Owners[0])
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
@@ -215,7 +217,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 	})
 
 	It("should allow enabled Ingress by regex using the deprecated annotation", func() {
-		ns := NewNamespace("ingress-class-allowed-annotation-extensions-v1beta1")
+		ns := NewNamespace("")
 		cs := ownerClient(tnt.Spec.Owners[0])
 		ingressClass := "oil-ingress"
 
@@ -224,8 +226,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 
 		Eventually(func() (err error) {
 			if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}
@@ -250,7 +251,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 	})
 
 	It("should allow enabled Ingress by regex using the ingressClassName field", func() {
-		ns := NewNamespace("ingress-class-allowed-annotation-extensions-v1beta1")
+		ns := NewNamespace("")
 		cs := ownerClient(tnt.Spec.Owners[0])
 		ingressClass := "oil-haproxy"
 
@@ -259,8 +260,7 @@ var _ = Describe("when Tenant handles Ingress classes with extensions/v1beta1", 
 
 		Eventually(func() (err error) {
 			if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}

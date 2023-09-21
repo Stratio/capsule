@@ -9,7 +9,9 @@ import (
 	"context"
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	"github.com/clastix/capsule/pkg/api"
+
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,22 +20,22 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
 )
 
 var _ = Describe("exceeding a Tenant resource quota", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tenant-resources-changes",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "bobby",
 					Kind: "User",
 				},
 			},
-			LimitRanges: capsulev1beta1.LimitRangesSpec{Items: []corev1.LimitRangeSpec{
+			LimitRanges: api.LimitRangesSpec{Items: []corev1.LimitRangeSpec{
 				{
 					Limits: []corev1.LimitRangeItem{
 						{
@@ -79,7 +81,7 @@ var _ = Describe("exceeding a Tenant resource quota", func() {
 				},
 			},
 			},
-			ResourceQuota: capsulev1beta1.ResourceQuotaSpec{Items: []corev1.ResourceQuotaSpec{
+			ResourceQuota: api.ResourceQuotaSpec{Items: []corev1.ResourceQuotaSpec{
 				{
 					Hard: map[corev1.ResourceName]resource.Quantity{
 						corev1.ResourceLimitsCPU:      resource.MustParse("8"),
@@ -133,7 +135,7 @@ var _ = Describe("exceeding a Tenant resource quota", func() {
 						Name: "my-pause",
 					},
 					Spec: appsv1.DeploymentSpec{
-						Replicas: pointer.Int32Ptr(5),
+						Replicas: pointer.Int32(5),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"app": "pause",

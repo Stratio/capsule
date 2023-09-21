@@ -7,29 +7,32 @@ import (
 	"fmt"
 	"strings"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	"github.com/clastix/capsule/pkg/api"
+	"github.com/clastix/capsule/pkg/webhook/utils"
 )
 
 type ingressClassForbiddenError struct {
-	className string
-	spec      capsulev1beta1.AllowedListSpec
+	ingressClassName string
+	spec             api.DefaultAllowedListSpec
 }
 
-func NewIngressClassForbidden(className string, spec capsulev1beta1.AllowedListSpec) error {
+func NewIngressClassForbidden(class string, spec api.DefaultAllowedListSpec) error {
 	return &ingressClassForbiddenError{
-		className: className,
-		spec:      spec,
+		ingressClassName: class,
+		spec:             spec,
 	}
 }
 
 func (i ingressClassForbiddenError) Error() string {
-	return fmt.Sprintf("Ingress Class %s is forbidden for the current Tenant%s", i.className, appendClassError(i.spec))
+	err := fmt.Sprintf("Ingress Class %s is forbidden for the current Tenant: ", i.ingressClassName)
+
+	return utils.DefaultAllowedValuesErrorMessage(i.spec, err)
 }
 
 type ingressHostnameNotValidError struct {
 	invalidHostnames     []string
 	notMatchingHostnames []string
-	spec                 capsulev1beta1.AllowedListSpec
+	spec                 api.AllowedListSpec
 }
 
 type ingressHostnameCollisionError struct {
@@ -44,7 +47,7 @@ func NewIngressHostnameCollision(hostname string) error {
 	return &ingressHostnameCollisionError{hostname: hostname}
 }
 
-func NewIngressHostnamesNotValid(invalidHostnames []string, notMatchingHostnames []string, spec capsulev1beta1.AllowedListSpec) error {
+func NewIngressHostnamesNotValid(invalidHostnames []string, notMatchingHostnames []string, spec api.AllowedListSpec) error {
 	return &ingressHostnameNotValidError{invalidHostnames: invalidHostnames, notMatchingHostnames: notMatchingHostnames, spec: spec}
 }
 
@@ -53,35 +56,40 @@ func (i ingressHostnameNotValidError) Error() string {
 		i.invalidHostnames, i.notMatchingHostnames, appendHostnameError(i.spec))
 }
 
-type ingressClassNotValidError struct {
-	spec capsulev1beta1.AllowedListSpec
+type ingressClassUndefinedError struct {
+	spec api.DefaultAllowedListSpec
 }
 
-func NewIngressClassNotValid(spec capsulev1beta1.AllowedListSpec) error {
-	return &ingressClassNotValidError{
+func NewIngressClassUndefined(spec api.DefaultAllowedListSpec) error {
+	return &ingressClassUndefinedError{
 		spec: spec,
 	}
 }
 
+func (i ingressClassUndefinedError) Error() string {
+	return utils.DefaultAllowedValuesErrorMessage(i.spec, "No Ingress Class is forbidden for the current Tenant. Specify a Ingress Class which is allowed within the Tenant: ")
+}
+
+type ingressClassNotValidError struct {
+	ingressClassName string
+	spec             api.DefaultAllowedListSpec
+}
+
+func NewIngressClassNotValid(class string, spec api.DefaultAllowedListSpec) error {
+	return &ingressClassNotValidError{
+		ingressClassName: class,
+		spec:             spec,
+	}
+}
+
 func (i ingressClassNotValidError) Error() string {
-	return "A valid Ingress Class must be used" + appendClassError(i.spec)
+	err := fmt.Sprintf("Ingress Class %s is forbidden for the current Tenant: ", i.ingressClassName)
+
+	return utils.DefaultAllowedValuesErrorMessage(i.spec, err)
 }
 
-// nolint:predeclared
-func appendClassError(spec capsulev1beta1.AllowedListSpec) (append string) {
-	if len(spec.Exact) > 0 {
-		append += fmt.Sprintf(", one of the following (%s)", strings.Join(spec.Exact, ", "))
-	}
-
-	if len(spec.Regex) > 0 {
-		append += fmt.Sprintf(", or matching the regex %s", spec.Regex)
-	}
-
-	return
-}
-
-// nolint:predeclared
-func appendHostnameError(spec capsulev1beta1.AllowedListSpec) (append string) {
+//nolint:predeclared
+func appendHostnameError(spec api.AllowedListSpec) (append string) {
 	if len(spec.Exact) > 0 {
 		append = fmt.Sprintf(", specify one of the following (%s)", strings.Join(spec.Exact, ", "))
 	}

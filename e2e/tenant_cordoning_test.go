@@ -9,22 +9,22 @@ import (
 	"context"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
 )
 
 var _ = Describe("cordoning a Tenant", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tenant-cordoning",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "jim",
 					Kind: "User",
@@ -46,7 +46,7 @@ var _ = Describe("cordoning a Tenant", func() {
 	It("should block or allow operations", func() {
 		cs := ownerClient(tnt.Spec.Owners[0])
 
-		ns := NewNamespace("cordoned-namespace")
+		ns := NewNamespace("")
 
 		pod := &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
@@ -75,9 +75,7 @@ var _ = Describe("cordoning a Tenant", func() {
 		By("cordoning the Tenant deletion must be blocked", func() {
 			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: tnt.Name}, tnt)).Should(Succeed())
 
-			tnt.Labels = map[string]string{
-				"capsule.clastix.io/cordon": "enabled",
-			}
+			tnt.Spec.Cordoned = true
 
 			Expect(k8sClient.Update(context.TODO(), tnt)).Should(Succeed())
 
@@ -89,7 +87,7 @@ var _ = Describe("cordoning a Tenant", func() {
 		By("uncordoning the Tenant deletion must be allowed", func() {
 			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: tnt.Name}, tnt)).Should(Succeed())
 
-			tnt.Labels = map[string]string{}
+			tnt.Spec.Cordoned = false
 
 			Expect(k8sClient.Update(context.TODO(), tnt)).Should(Succeed())
 

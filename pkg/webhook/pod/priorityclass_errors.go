@@ -5,17 +5,17 @@ package pod
 
 import (
 	"fmt"
-	"strings"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	"github.com/clastix/capsule/pkg/api"
+	"github.com/clastix/capsule/pkg/webhook/utils"
 )
 
 type podPriorityClassForbiddenError struct {
 	priorityClassName string
-	spec              capsulev1beta1.AllowedListSpec
+	spec              api.DefaultAllowedListSpec
 }
 
-func NewPodPriorityClassForbidden(priorityClassName string, spec capsulev1beta1.AllowedListSpec) error {
+func NewPodPriorityClassForbidden(priorityClassName string, spec api.DefaultAllowedListSpec) error {
 	return &podPriorityClassForbiddenError{
 		priorityClassName: priorityClassName,
 		spec:              spec,
@@ -23,19 +23,7 @@ func NewPodPriorityClassForbidden(priorityClassName string, spec capsulev1beta1.
 }
 
 func (f podPriorityClassForbiddenError) Error() (err string) {
-	err = fmt.Sprintf("Pod Priorioty Class %s is forbidden for the current Tenant: ", f.priorityClassName)
+	msg := fmt.Sprintf("Pod Priority Class %s is forbidden for the current Tenant: ", f.priorityClassName)
 
-	var extra []string
-
-	if len(f.spec.Exact) > 0 {
-		extra = append(extra, fmt.Sprintf("use one from the following list (%s)", strings.Join(f.spec.Exact, ", ")))
-	}
-
-	if len(f.spec.Regex) > 0 {
-		extra = append(extra, fmt.Sprintf(" use one matching the following regex (%s)", f.spec.Regex))
-	}
-
-	err += strings.Join(extra, " or ")
-
-	return
+	return utils.DefaultAllowedValuesErrorMessage(f.spec, msg)
 }

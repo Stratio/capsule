@@ -5,44 +5,33 @@ package pvc
 
 import (
 	"fmt"
-	"strings"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	"github.com/clastix/capsule/pkg/api"
+	"github.com/clastix/capsule/pkg/webhook/utils"
 )
 
 type storageClassNotValidError struct {
-	spec capsulev1beta1.AllowedListSpec
+	spec api.DefaultAllowedListSpec
 }
 
-func NewStorageClassNotValid(storageClasses capsulev1beta1.AllowedListSpec) error {
+func NewStorageClassNotValid(storageClasses api.DefaultAllowedListSpec) error {
 	return &storageClassNotValidError{
 		spec: storageClasses,
 	}
 }
 
-// nolint:predeclared
-func appendError(spec capsulev1beta1.AllowedListSpec) (append string) {
-	if len(spec.Exact) > 0 {
-		append += fmt.Sprintf(", one of the following (%s)", strings.Join(spec.Exact, ", "))
-	}
-
-	if len(spec.Regex) > 0 {
-		append += fmt.Sprintf(", or matching the regex %s", spec.Regex)
-	}
-
-	return
-}
-
 func (s storageClassNotValidError) Error() (err string) {
-	return "A valid Storage Class must be used" + appendError(s.spec)
+	msg := "A valid Storage Class must be used: "
+
+	return utils.DefaultAllowedValuesErrorMessage(s.spec, msg)
 }
 
 type storageClassForbiddenError struct {
 	className string
-	spec      capsulev1beta1.AllowedListSpec
+	spec      api.DefaultAllowedListSpec
 }
 
-func NewStorageClassForbidden(className string, storageClasses capsulev1beta1.AllowedListSpec) error {
+func NewStorageClassForbidden(className string, storageClasses api.DefaultAllowedListSpec) error {
 	return &storageClassForbiddenError{
 		className: className,
 		spec:      storageClasses,
@@ -50,5 +39,55 @@ func NewStorageClassForbidden(className string, storageClasses capsulev1beta1.Al
 }
 
 func (f storageClassForbiddenError) Error() string {
-	return fmt.Sprintf("Storage Class %s is forbidden for the current Tenant%s", f.className, appendError(f.spec))
+	msg := fmt.Sprintf("Storage Class %s is forbidden for the current Tenant ", f.className)
+
+	return utils.DefaultAllowedValuesErrorMessage(f.spec, msg)
+}
+
+type missingPVLabelsError struct {
+	name string
+}
+
+func NewMissingPVLabelsError(name string) error {
+	return &missingPVLabelsError{name: name}
+}
+
+func (m missingPVLabelsError) Error() string {
+	return fmt.Sprintf("PeristentVolume %s is missing any label, please, ask the Cluster Administrator to label it", m.name)
+}
+
+type missingPVTenantLabelsError struct {
+	name string
+}
+
+func NewMissingTenantPVLabelsError(name string) error {
+	return &missingPVTenantLabelsError{name: name}
+}
+
+func (m missingPVTenantLabelsError) Error() string {
+	return fmt.Sprintf("PeristentVolume %s is missing the Capsule Tenant label, preventing a potential cross-tenant mount", m.name)
+}
+
+type crossTenantPVMountError struct {
+	name string
+}
+
+func NewCrossTenantPVMountError(name string) error {
+	return &crossTenantPVMountError{
+		name: name,
+	}
+}
+
+func (m crossTenantPVMountError) Error() string {
+	return fmt.Sprintf("PeristentVolume %s cannot be used by the following Tenant, preventing a cross-tenant mount", m.name)
+}
+
+type pvSelectorError struct{}
+
+func NewPVSelectorError() error {
+	return &pvSelectorError{}
+}
+
+func (m pvSelectorError) Error() string {
+	return "PersistentVolume selectors are not allowed since unable to prevent cross-tenant mount"
 }

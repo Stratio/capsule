@@ -1,3 +1,6 @@
+// Copyright 2020-2021 Clastix Labs
+// SPDX-License-Identifier: Apache-2.0
+
 package utils
 
 import (
@@ -9,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
 	"github.com/clastix/capsule/pkg/utils"
 )
 
@@ -21,14 +24,14 @@ func IsCapsuleUser(ctx context.Context, req admission.Request, clt client.Client
 	if groupList.Find("system:serviceaccounts:kube-system") {
 		return false
 	}
-	// nolint:nestif
+	//nolint:nestif
 	if sets.NewString(req.UserInfo.Groups...).Has("system:serviceaccounts") {
 		parts := strings.Split(req.UserInfo.Username, ":")
 
-		targetNamespace := parts[2]
+		if len(parts) == 4 {
+			targetNamespace := parts[2]
 
-		if len(targetNamespace) > 0 {
-			tl := &capsulev1beta1.TenantList{}
+			tl := &capsulev1beta2.TenantList{}
 			if err := clt.List(ctx, tl, client.MatchingFieldsSelector{Selector: fields.OneTermEqualSelector(".status.namespaces", targetNamespace)}); err != nil {
 				return false
 			}

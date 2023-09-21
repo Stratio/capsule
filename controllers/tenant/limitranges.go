@@ -1,3 +1,6 @@
+// Copyright 2020-2021 Clastix Labs
+// SPDX-License-Identifier: Apache-2.0
+
 package tenant
 
 import (
@@ -10,12 +13,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	"github.com/clastix/capsule/pkg/utils"
 )
 
-// nolint:dupl
 // Ensuring all the LimitRange are applied to each Namespace handled by the Tenant.
-func (r *Manager) syncLimitRanges(ctx context.Context, tenant *capsulev1beta1.Tenant) error {
+func (r *Manager) syncLimitRanges(ctx context.Context, tenant *capsulev1beta2.Tenant) error { //nolint:dupl
 	// getting requested LimitRange keys
 	keys := make([]string, 0, len(tenant.Spec.LimitRanges.Items))
 
@@ -36,15 +39,15 @@ func (r *Manager) syncLimitRanges(ctx context.Context, tenant *capsulev1beta1.Te
 	return group.Wait()
 }
 
-func (r *Manager) syncLimitRange(ctx context.Context, tenant *capsulev1beta1.Tenant, namespace string, keys []string) (err error) {
+func (r *Manager) syncLimitRange(ctx context.Context, tenant *capsulev1beta2.Tenant, namespace string, keys []string) (err error) {
 	// getting LimitRange labels for the mutateFn
 	var tenantLabel, limitRangeLabel string
 
-	if tenantLabel, err = capsulev1beta1.GetTypeLabel(&capsulev1beta1.Tenant{}); err != nil {
+	if tenantLabel, err = utils.GetTypeLabel(&capsulev1beta2.Tenant{}); err != nil {
 		return err
 	}
 
-	if limitRangeLabel, err = capsulev1beta1.GetTypeLabel(&corev1.LimitRange{}); err != nil {
+	if limitRangeLabel, err = utils.GetTypeLabel(&corev1.LimitRange{}); err != nil {
 		return err
 	}
 

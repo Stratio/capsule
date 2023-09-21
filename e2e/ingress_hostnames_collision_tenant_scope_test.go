@@ -7,34 +7,34 @@ package e2e
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	"github.com/clastix/capsule/pkg/api"
+	"github.com/clastix/capsule/pkg/utils"
 )
 
 var _ = Describe("when handling Tenant scoped Ingress hostnames collision", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "hostnames-collision-tenant",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "ingress-tenant",
 					Kind: "User",
 				},
 			},
-			IngressOptions: capsulev1beta1.IngressOptions{
-				HostnameCollisionScope: capsulev1beta1.HostnameCollisionScopeTenant,
+			IngressOptions: capsulev1beta2.IngressOptions{
+				HostnameCollisionScope: api.HostnameCollisionScopeTenant,
 			},
 		},
 	}
@@ -119,9 +119,9 @@ var _ = Describe("when handling Tenant scoped Ingress hostnames collision", func
 
 	It("should ensure Tenant scope for Ingress hostname and path collision", func() {
 
-		ns1 := NewNamespace("cluster-collision-one")
+		ns1 := NewNamespace("")
 
-		ns2 := NewNamespace("cluster-collision-two")
+		ns2 := NewNamespace("")
 
 		cs := ownerClient(tnt.Spec.Owners[0])
 
@@ -132,8 +132,7 @@ var _ = Describe("when handling Tenant scoped Ingress hostnames collision", func
 
 		By("testing networking.k8s.io", func() {
 			if err := k8sClient.List(context.Background(), &networkingv1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}
@@ -167,8 +166,7 @@ var _ = Describe("when handling Tenant scoped Ingress hostnames collision", func
 
 		By("testing extensions", func() {
 			if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}

@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/clastix/capsule/controllers/utils"
 	"github.com/clastix/capsule/pkg/cert"
@@ -49,7 +48,7 @@ type Reconciler struct {
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	enqueueFn := handler.EnqueueRequestsFromMapFunc(func(client.Object) []reconcile.Request {
+	enqueueFn := handler.EnqueueRequestsFromMapFunc(func(context.Context, client.Object) []reconcile.Request {
 		return []reconcile.Request{
 			{
 				NamespacedName: types.NamespacedName{
@@ -62,13 +61,13 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Secret{}, utils.NamesMatchingPredicate(r.Configuration.TLSSecretName())).
-		Watches(source.NewKindWithCache(&admissionregistrationv1.ValidatingWebhookConfiguration{}, mgr.GetCache()), enqueueFn, builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
+		Watches(&admissionregistrationv1.ValidatingWebhookConfiguration{}, enqueueFn, builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
 			return object.GetName() == r.Configuration.ValidatingWebhookConfigurationName()
 		}))).
-		Watches(source.NewKindWithCache(&admissionregistrationv1.MutatingWebhookConfiguration{}, mgr.GetCache()), enqueueFn, builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
+		Watches(&admissionregistrationv1.MutatingWebhookConfiguration{}, enqueueFn, builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
 			return object.GetName() == r.Configuration.MutatingWebhookConfigurationName()
 		}))).
-		Watches(source.NewKindWithCache(&apiextensionsv1.CustomResourceDefinition{}, mgr.GetCache()), enqueueFn, builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
+		Watches(&apiextensionsv1.CustomResourceDefinition{}, enqueueFn, builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
 			return object.GetName() == r.Configuration.TenantCRDName()
 		}))).
 		Complete(r)
@@ -132,7 +131,10 @@ func (r Reconciler) ReconcileCertificates(ctx context.Context, certSecret *corev
 		return r.updateValidatingWebhookConfiguration(ctx, caBundle)
 	})
 	group.Go(func() error {
-		return r.updateCustomResourceDefinition(ctx, caBundle)
+		return r.updateTenantCustomResourceDefinition(ctx, "tenants.capsule.clastix.io", caBundle)
+	})
+	group.Go(func() error {
+		return r.updateTenantCustomResourceDefinition(ctx, "capsuleconfigurations.capsule.clastix.io", caBundle)
 	})
 
 	operatorPods, err := r.getOperatorPods(ctx)
@@ -214,10 +216,10 @@ func (r Reconciler) shouldUpdateCertificate(secret *corev1.Secret) bool {
 
 // By default helm doesn't allow to use templates in CRD (https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#method-1-let-helm-do-it-for-you).
 // In order to overcome this, we are setting conversion strategy in helm chart to None, and then update it with CA and namespace information.
-func (r *Reconciler) updateCustomResourceDefinition(ctx context.Context, caBundle []byte) error {
+func (r *Reconciler) updateTenantCustomResourceDefinition(ctx context.Context, name string, caBundle []byte) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() (err error) {
 		crd := &apiextensionsv1.CustomResourceDefinition{}
-		err = r.Get(ctx, types.NamespacedName{Name: "tenants.capsule.clastix.io"}, crd)
+		err = r.Get(ctx, types.NamespacedName{Name: name}, crd)
 		if err != nil {
 			r.Log.Error(err, "cannot retrieve CustomResourceDefinition")
 
@@ -232,12 +234,12 @@ func (r *Reconciler) updateCustomResourceDefinition(ctx context.Context, caBundl
 						Service: &apiextensionsv1.ServiceReference{
 							Namespace: r.Namespace,
 							Name:      "capsule-webhook-service",
-							Path:      pointer.StringPtr("/convert"),
-							Port:      pointer.Int32Ptr(443),
+							Path:      pointer.String("/convert"),
+							Port:      pointer.Int32(443),
 						},
 						CABundle: caBundle,
 					},
-					ConversionReviewVersions: []string{"v1alpha1", "v1beta1"},
+					ConversionReviewVersions: []string{"v1alpha1", "v1beta1", "v1beta2"},
 				},
 			}
 

@@ -14,8 +14,6 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
 IMG ?= clastix/capsule:$(VERSION)
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:preserveUnknownFields=false"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -72,14 +70,14 @@ remove: installer
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 # Generate code
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 apidoc: apidocs-gen
-	$(APIDOCS_GEN) crdoc --resources config/crd/bases --output docs/content/general/tenant-crd.md --template docs/template/reference-cr.tmpl
+	$(APIDOCS_GEN) crdoc --resources config/crd/bases --output docs/content/general/crds-apis.md --template docs/template/reference-cr.tmpl
 
 # Helm
 SRC_ROOT = $(shell git rev-parse --show-toplevel)
@@ -88,8 +86,15 @@ helm-docs: HELMDOCS_VERSION := v1.11.0
 helm-docs: docker
 	@docker run -v "$(SRC_ROOT):/helm-docs" jnorwood/helm-docs:$(HELMDOCS_VERSION) --chart-search-root /helm-docs
 
-helm-lint: docker
-	@docker run -v "$(SRC_ROOT):/workdir" --entrypoint /bin/sh quay.io/helmpack/chart-testing:v3.3.1 -c "cd /workdir && ct lint --config .github/configs/ct.yaml --lint-conf .github/configs/lintconf.yaml --all --debug"
+helm-lint: ct
+	@ct lint --config $(SRC_ROOT)/.github/configs/ct.yaml --lint-conf $(SRC_ROOT)/.github/configs/lintconf.yaml --all --debug
+
+helm-test: kind ct docker-build
+	@kind create cluster --wait=60s --name capsule-charts
+	@kind load docker-image --name capsule-charts ${IMG}
+	@kubectl create ns capsule-system
+	@ct install --config $(SRC_ROOT)/.github/configs/ct.yaml --namespace=capsule-system --all --debug
+	@kind delete cluster --name capsule-charts
 
 docker:
 	@hash docker 2>/dev/null || {\
@@ -134,7 +139,10 @@ dev-setup:
 	export CA_BUNDLE=`openssl base64 -in /tmp/k8s-webhook-server/serving-certs/tls.crt | tr -d '\n'`; \
 	kubectl patch MutatingWebhookConfiguration capsule-mutating-webhook-configuration \
 		--type='json' -p="[\
-			{'op': 'replace', 'path': '/webhooks/0/clientConfig', 'value':{'url':\"$${WEBHOOK_URL}/namespace-owner-reference\",'caBundle':\"$${CA_BUNDLE}\"}}\
+		    {'op': 'replace', 'path': '/webhooks/0/clientConfig', 'value':{'url':\"$${WEBHOOK_URL}/defaults\",'caBundle':\"$${CA_BUNDLE}\"}},\
+			{'op': 'replace', 'path': '/webhooks/1/clientConfig', 'value':{'url':\"$${WEBHOOK_URL}/defaults\",'caBundle':\"$${CA_BUNDLE}\"}},\
+			{'op': 'replace', 'path': '/webhooks/2/clientConfig', 'value':{'url':\"$${WEBHOOK_URL}/defaults\",'caBundle':\"$${CA_BUNDLE}\"}},\
+			{'op': 'replace', 'path': '/webhooks/3/clientConfig', 'value':{'url':\"$${WEBHOOK_URL}/namespace-owner-reference\",'caBundle':\"$${CA_BUNDLE}\"}}\
 		]" && \
 	kubectl patch ValidatingWebhookConfiguration capsule-validating-webhook-configuration \
 		--type='json' -p="[\
@@ -147,7 +155,16 @@ dev-setup:
 			{'op': 'replace', 'path': '/webhooks/6/clientConfig', 'value':{'url':\"$${WEBHOOK_URL}/persistentvolumeclaims\",'caBundle':\"$${CA_BUNDLE}\"}},\
 			{'op': 'replace', 'path': '/webhooks/7/clientConfig', 'value':{'url':\"$${WEBHOOK_URL}/services\",'caBundle':\"$${CA_BUNDLE}\"}},\
 			{'op': 'replace', 'path': '/webhooks/8/clientConfig', 'value':{'url':\"$${WEBHOOK_URL}/tenants\",'caBundle':\"$${CA_BUNDLE}\"}}\
+		]" && \
+	kubectl patch crd tenants.capsule.clastix.io \
+		--type='json' -p="[\
+			{'op': 'replace', 'path': '/spec/conversion/webhook/clientConfig', 'value':{'url': \"$${WEBHOOK_URL}\", 'caBundle': \"$${CA_BUNDLE}\"}}\
+		]" && \
+	kubectl patch crd capsuleconfigurations.capsule.clastix.io \
+		--type='json' -p="[\
+			{'op': 'replace', 'path': '/spec/conversion/webhook/clientConfig', 'value':{'url': \"$${WEBHOOK_URL}\", 'caBundle': \"$${CA_BUNDLE}\"}}\
 		]";
+
 
 # Build the docker image
 docker-build: test
@@ -164,7 +181,7 @@ docker-push:
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0)
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.10.0)
 
 APIDOCS_GEN = $(shell pwd)/bin/crdoc
 apidocs-gen: ## Download crdoc locally if necessary.
@@ -172,7 +189,15 @@ apidocs-gen: ## Download crdoc locally if necessary.
 
 GINKGO = $(shell pwd)/bin/ginkgo
 ginkgo: ## Download ginkgo locally if necessary.
-	$(call go-install-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo@v1.16.5)
+	$(call go-install-tool,$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo@v2.9.5)
+
+CT = $(shell pwd)/bin/ct
+ct: ## Download ct locally if necessary.
+	$(call go-install-tool,$(CT),github.com/helm/chart-testing/v3/ct@v3.7.1)
+
+KIND = $(shell pwd)/bin/kind
+kind: ## Download kind locally if necessary.
+	$(call go-install-tool,$(KIND),sigs.k8s.io/kind/cmd/kind@v0.17.0)
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
@@ -213,18 +238,22 @@ bundle-build:
 goimports:
 	goimports -w -l -local "github.com/clastix/capsule" .
 
+GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
+golangci-lint: ## Download golangci-lint locally if necessary.
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.2)
+
 # Linting code as PR is expecting
 .PHONY: golint
-golint:
-	golangci-lint run -c .golangci.yml
+golint: golangci-lint
+	$(GOLANGCI_LINT) run -c .golangci.yml
 
 # Running e2e tests in a KinD instance
 .PHONY: e2e
 e2e/%: ginkgo
-	$(MAKE) e2e-build/$* && $(MAKE) e2e-exec || $(MAKE) e2e-destroy
+	$(MAKE) e2e-build/$* && $(MAKE) e2e-exec && $(MAKE) e2e-destroy
 
 e2e-build/%:
-	kind create cluster --name capsule --image=kindest/node:$*
+	kind create cluster --wait=60s --name capsule --image=kindest/node:$*
 	make docker-build
 	kind load docker-image --nodes capsule-control-plane --name capsule $(IMG)
 	helm upgrade \
@@ -237,10 +266,11 @@ e2e-build/%:
 		--set "manager.image.tag=$(VERSION)" \
 		--set 'manager.livenessProbe.failureThreshold=10' \
 		--set 'manager.readinessProbe.failureThreshold=10' \
+		--set 'podSecurityContext.seccompProfile=null' \
 		capsule \
 		./charts/capsule
 
-e2e-exec:
+e2e-exec: ginkgo
 	$(GINKGO) -v -tags e2e ./e2e
 
 e2e-destroy:

@@ -14,7 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	capsuleutils "github.com/clastix/capsule/pkg/utils"
 	capsulewebhook "github.com/clastix/capsule/pkg/webhook"
 	"github.com/clastix/capsule/pkg/webhook/utils"
 )
@@ -46,7 +47,7 @@ func (r *patchHandler) OnUpdate(c client.Client, decoder *admission.Decoder, rec
 		}
 
 		// Get Tenant Label
-		ln, err := capsulev1beta1.GetTypeLabel(&capsulev1beta1.Tenant{})
+		ln, err := capsuleutils.GetTypeLabel(&capsulev1beta2.Tenant{})
 		if err != nil {
 			response := admission.Errored(http.StatusBadRequest, err)
 
@@ -58,7 +59,7 @@ func (r *patchHandler) OnUpdate(c client.Client, decoder *admission.Decoder, rec
 
 		if label, ok := ns.ObjectMeta.Labels[ln]; ok {
 			// retrieving the selected Tenant
-			tnt := &capsulev1beta1.Tenant{}
+			tnt := &capsulev1beta2.Tenant{}
 			if err = c.Get(ctx, types.NamespacedName{Name: label}, tnt); err != nil {
 				response := admission.Errored(http.StatusBadRequest, err)
 
@@ -71,11 +72,6 @@ func (r *patchHandler) OnUpdate(c client.Client, decoder *admission.Decoder, rec
 
 				return &response
 			}
-		} else {
-			recorder.Eventf(ns, corev1.EventTypeWarning, "NamespacePatch", e)
-			response := admission.Denied(e)
-
-			return &response
 		}
 
 		return nil

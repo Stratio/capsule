@@ -20,7 +20,9 @@ type Ingress interface {
 	IngressClass() *string
 	Namespace() string
 	Name() string
-	HostnamePathsPairs() map[string]sets.String
+	HostnamePathsPairs() map[string]sets.Set[string]
+	SetIngressClass(string)
+	SetNamespace(string)
 }
 
 type NetworkingV1 struct {
@@ -44,19 +46,37 @@ func (n NetworkingV1) IngressClass() (res *string) {
 	return
 }
 
+func (n NetworkingV1) SetIngressClass(ingressClassName string) {
+	if n.Spec.IngressClassName == nil {
+		if a := n.GetAnnotations(); a != nil {
+			if _, ok := a[annotationName]; ok {
+				a[annotationName] = ingressClassName
+
+				return
+			}
+		}
+	}
+	// Assign in case the IngressClassName property was not set
+	n.Spec.IngressClassName = &ingressClassName
+}
+
 func (n NetworkingV1) Namespace() string {
 	return n.GetNamespace()
 }
 
-// nolint:dupl
-func (n NetworkingV1) HostnamePathsPairs() (pairs map[string]sets.String) {
-	pairs = make(map[string]sets.String)
+func (n NetworkingV1) SetNamespace(ns string) {
+	n.Ingress.SetNamespace(ns)
+}
+
+//nolint:dupl
+func (n NetworkingV1) HostnamePathsPairs() (pairs map[string]sets.Set[string]) {
+	pairs = make(map[string]sets.Set[string])
 
 	for _, rule := range n.Spec.Rules {
 		host := rule.Host
 
 		if _, ok := pairs[host]; !ok {
-			pairs[host] = sets.NewString()
+			pairs[host] = sets.New[string]()
 		}
 
 		if http := rule.IngressRuleValue.HTTP; http != nil {
@@ -96,19 +116,37 @@ func (n NetworkingV1Beta1) IngressClass() (res *string) {
 	return
 }
 
+func (n NetworkingV1Beta1) SetIngressClass(ingressClassName string) {
+	if n.Spec.IngressClassName == nil {
+		if a := n.GetAnnotations(); a != nil {
+			if _, ok := a[annotationName]; ok {
+				a[annotationName] = ingressClassName
+
+				return
+			}
+		}
+	}
+	// Assign in case the IngressClassName property was not set
+	n.Annotations[annotationName] = ingressClassName
+}
+
 func (n NetworkingV1Beta1) Namespace() string {
 	return n.GetNamespace()
 }
 
-// nolint:dupl
-func (n NetworkingV1Beta1) HostnamePathsPairs() (pairs map[string]sets.String) {
-	pairs = make(map[string]sets.String)
+func (n NetworkingV1Beta1) SetNamespace(ns string) {
+	n.Ingress.SetNamespace(ns)
+}
+
+//nolint:dupl
+func (n NetworkingV1Beta1) HostnamePathsPairs() (pairs map[string]sets.Set[string]) {
+	pairs = make(map[string]sets.Set[string])
 
 	for _, rule := range n.Spec.Rules {
 		host := rule.Host
 
 		if _, ok := pairs[host]; !ok {
-			pairs[host] = sets.NewString()
+			pairs[host] = sets.New[string]()
 		}
 
 		if http := rule.IngressRuleValue.HTTP; http != nil {
@@ -135,6 +173,10 @@ func (e Extension) Name() string {
 	return e.GetName()
 }
 
+func (e Extension) SetNamespace(ns string) {
+	e.Ingress.SetNamespace(ns)
+}
+
 func (e Extension) IngressClass() (res *string) {
 	res = e.Spec.IngressClassName
 	if res == nil {
@@ -148,19 +190,31 @@ func (e Extension) IngressClass() (res *string) {
 	return
 }
 
+func (e Extension) SetIngressClass(ingressClassName string) {
+	if a := e.GetAnnotations(); a != nil {
+		if _, ok := a[annotationName]; ok {
+			a[annotationName] = ingressClassName
+
+			return
+		}
+	}
+	// Assign in case the IngressClassName property was not set
+	e.Annotations[annotationName] = ingressClassName
+}
+
 func (e Extension) Namespace() string {
 	return e.GetNamespace()
 }
 
-// nolint:dupl
-func (e Extension) HostnamePathsPairs() (pairs map[string]sets.String) {
-	pairs = make(map[string]sets.String)
+//nolint:dupl
+func (e Extension) HostnamePathsPairs() (pairs map[string]sets.Set[string]) {
+	pairs = make(map[string]sets.Set[string])
 
 	for _, rule := range e.Spec.Rules {
 		host := rule.Host
 
 		if _, ok := pairs[host]; !ok {
-			pairs[host] = sets.NewString()
+			pairs[host] = sets.New[string]()
 		}
 
 		if http := rule.IngressRuleValue.HTTP; http != nil {

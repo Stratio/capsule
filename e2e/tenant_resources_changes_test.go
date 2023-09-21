@@ -9,7 +9,9 @@ import (
 	"context"
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	"github.com/clastix/capsule/pkg/api"
+
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -18,22 +20,22 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
 )
 
 var _ = Describe("changing Tenant managed Kubernetes resources", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tenant-resources-changes",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "laura",
 					Kind: "User",
 				},
 			},
-			LimitRanges: capsulev1beta1.LimitRangesSpec{Items: []corev1.LimitRangeSpec{
+			LimitRanges: api.LimitRangesSpec{Items: []corev1.LimitRangeSpec{
 				{
 					Limits: []corev1.LimitRangeItem{
 						{
@@ -79,7 +81,7 @@ var _ = Describe("changing Tenant managed Kubernetes resources", func() {
 				},
 			},
 			},
-			NetworkPolicies: capsulev1beta1.NetworkPolicySpec{Items: []networkingv1.NetworkPolicySpec{
+			NetworkPolicies: api.NetworkPolicySpec{Items: []networkingv1.NetworkPolicySpec{
 				{
 					Ingress: []networkingv1.NetworkPolicyIngressRule{
 						{
@@ -127,7 +129,7 @@ var _ = Describe("changing Tenant managed Kubernetes resources", func() {
 			NodeSelector: map[string]string{
 				"kubernetes.io/os": "linux",
 			},
-			ResourceQuota: capsulev1beta1.ResourceQuotaSpec{Items: []corev1.ResourceQuotaSpec{
+			ResourceQuota: api.ResourceQuotaSpec{Items: []corev1.ResourceQuotaSpec{
 				{
 					Hard: map[corev1.ResourceName]resource.Quantity{
 						corev1.ResourceLimitsCPU:      resource.MustParse("8"),

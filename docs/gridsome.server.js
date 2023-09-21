@@ -39,7 +39,7 @@ module.exports = function (api) {
             },
             {
               label: 'CRDs APIs',
-              path: '/docs/general/tenant-crd'
+              path: '/docs/general/crds-apis'
             },
             {
               label: 'Multi-Tenant Benchmark',
@@ -67,11 +67,15 @@ module.exports = function (api) {
               path: '/docs/guides/monitoring'
             },
             {
+              label: 'Kubernetes Dashboard',
+              path: '/docs/guides/kubernetes-dashboard'
+            },
+            {
               label: 'Backup & Restore with Velero',
               path: '/docs/guides/velero'
             },
             {
-              label: 'Upgrading Tenant version',
+              label: 'Upgrading Capsule',
               path: '/docs/guides/upgrading'
             },
             {

@@ -4,7 +4,7 @@
 
 Make sure you have these tools installed:
 
-- [Go 1.18+](https://golang.org/dl/)
+- [Go 1.19+](https://golang.org/dl/)
 - [Operator SDK 1.7.2+](https://github.com/operator-framework/operator-sdk), or [Kubebuilder](https://github.com/kubernetes-sigs/kubebuilder)
 - [KinD](https://github.com/kubernetes-sigs/kind) or [k3d](https://k3d.io/), with `kubectl`
 - [ngrok](https://ngrok.com/) (if you want to run locally with remote Kubernetes)
@@ -152,7 +152,7 @@ $ kubectl -n capsule-system logs --all-containers -l control-plane=controller-ma
 
 # You may have a try to deploy a Tenant too to make sure it works end to end
 $ kubectl apply -f - <<EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -307,7 +307,7 @@ To verify that, we can open a new console and create a new Tenant:
 
 ```shell
 $ kubectl apply -f - <<EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: gas

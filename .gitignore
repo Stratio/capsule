@@ -28,6 +28,4 @@
 **/*.key
 .DS_Store
 *.tgz
-
-capsule
-
+kind.yaml

@@ -8,30 +8,31 @@ package e2e
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	"github.com/clastix/capsule/pkg/api"
 )
 
 var _ = Describe("enforcing an allowed set of Service external IPs", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "allowed-external-ip",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "google",
 					Kind: "User",
 				},
 			},
-			ServiceOptions: &capsulev1beta1.ServiceOptions{
-				ExternalServiceIPs: &capsulev1beta1.ExternalServiceIPsSpec{
-					Allowed: []capsulev1beta1.AllowedIP{
+			ServiceOptions: &api.ServiceOptions{
+				ExternalServiceIPs: &api.ExternalServiceIPsSpec{
+					Allowed: []api.AllowedIP{
 						"10.20.0.0/16",
 						"192.168.1.2/32",
 					},
@@ -51,7 +52,7 @@ var _ = Describe("enforcing an allowed set of Service external IPs", func() {
 	})
 
 	It("should fail creating an evil service", func() {
-		ns := NewNamespace("evil-service")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 
 		svc := &corev1.Service{
@@ -84,7 +85,7 @@ var _ = Describe("enforcing an allowed set of Service external IPs", func() {
 	})
 
 	It("should allow the first CIDR block", func() {
-		ns := NewNamespace("allowed-service-cidr")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 
 		svc := &corev1.Service{
@@ -117,7 +118,7 @@ var _ = Describe("enforcing an allowed set of Service external IPs", func() {
 	})
 
 	It("should allow the /32 CIDR block", func() {
-		ns := NewNamespace("allowed-service-strict")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 
 		svc := &corev1.Service{

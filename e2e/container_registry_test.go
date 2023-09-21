@@ -7,29 +7,37 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	"github.com/clastix/capsule/pkg/api"
 )
 
+type Patch struct {
+	Op    string `json:"op"`
+	Path  string `json:"path"`
+	Value string `json:"value"`
+}
+
 var _ = Describe("enforcing a Container Registry", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "container-registry",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "matt",
 					Kind: "User",
 				},
 			},
-			ContainerRegistries: &capsulev1beta1.AllowedListSpec{
+			ContainerRegistries: &api.AllowedListSpec{
 				Exact: []string{"docker.io", "myregistry.azurecr.io"},
 				Regex: `quay\.\w+`,
 			},
@@ -47,7 +55,7 @@ var _ = Describe("enforcing a Container Registry", func() {
 	})
 
 	It("should add labels to Namespace", func() {
-		ns := NewNamespace("registry-labels")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 		Eventually(func() (ok bool) {
 			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: ns.Name}, ns)).Should(Succeed())
@@ -64,7 +72,7 @@ var _ = Describe("enforcing a Container Registry", func() {
 	})
 
 	It("should deny running a gcr.io container", func() {
-		ns := NewNamespace("registry-deny")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 
 		pod := &corev1.Pod{
@@ -86,7 +94,7 @@ var _ = Describe("enforcing a Container Registry", func() {
 	})
 
 	It("should allow using a registry only match", func() {
-		ns := NewNamespace("registry-only")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 
 		pod := &corev1.Pod{
@@ -110,8 +118,192 @@ var _ = Describe("enforcing a Container Registry", func() {
 		}).Should(Succeed())
 	})
 
+	It("should deny patching a not matching registry after applying with a matching (Container)", func() {
+		ns := NewNamespace("")
+
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "container",
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  "container",
+						Image: "myregistry.azurecr.io/myapp:latest",
+					},
+				},
+			},
+		}
+
+		cs := ownerClient(tnt.Spec.Owners[0])
+
+		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
+		TenantNamespaceList(tnt, defaultTimeoutInterval).Should(ContainElement(ns.GetName()))
+
+		EventuallyCreation(func() error {
+			_, err := cs.CoreV1().Pods(ns.Name).Create(context.Background(), pod, metav1.CreateOptions{})
+
+			return err
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			payload := []Patch{{
+				Op:    "replace",
+				Path:  "/spec/containers/0/image",
+				Value: "attacker/google-containers/pause-amd64:3.0",
+			}}
+			payloadBytes, _ := json.Marshal(payload)
+			_, err := cs.CoreV1().Pods(ns.GetName()).Patch(context.TODO(), pod.GetName(), types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+			if err != nil {
+				return err
+			}
+			return nil
+		}).ShouldNot(Succeed())
+	})
+
+	It("should deny patching a not matching registry after applying with a matching (initContainer)", func() {
+		ns := NewNamespace("")
+
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "container",
+			},
+			Spec: corev1.PodSpec{
+				InitContainers: []corev1.Container{
+					{
+						Name:  "init",
+						Image: "myregistry.azurecr.io/myapp:latest",
+					},
+				},
+				Containers: []corev1.Container{
+					{
+						Name:  "container",
+						Image: "myregistry.azurecr.io/myapp:latest",
+					},
+				},
+			},
+		}
+
+		cs := ownerClient(tnt.Spec.Owners[0])
+
+		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
+		TenantNamespaceList(tnt, defaultTimeoutInterval).Should(ContainElement(ns.GetName()))
+
+		EventuallyCreation(func() error {
+			_, err := cs.CoreV1().Pods(ns.Name).Create(context.Background(), pod, metav1.CreateOptions{})
+
+			return err
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			payload := []Patch{{
+				Op:    "replace",
+				Path:  "/spec/initContainers/0/image",
+				Value: "attacker/google-containers/pause-amd64:3.0",
+			}}
+			payloadBytes, _ := json.Marshal(payload)
+			_, err := cs.CoreV1().Pods(ns.GetName()).Patch(context.TODO(), pod.GetName(), types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+			if err != nil {
+				return err
+			}
+			return nil
+		}).ShouldNot(Succeed())
+	})
+
+	It("should allow patching a matching registry after applying with a matching (Container)", func() {
+		ns := NewNamespace("")
+
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "container",
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  "container",
+						Image: "docker.io/google-containers/pause-amd64:3.0",
+					},
+				},
+			},
+		}
+
+		cs := ownerClient(tnt.Spec.Owners[0])
+
+		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
+		TenantNamespaceList(tnt, defaultTimeoutInterval).Should(ContainElement(ns.GetName()))
+
+		EventuallyCreation(func() error {
+			_, err := cs.CoreV1().Pods(ns.Name).Create(context.Background(), pod, metav1.CreateOptions{})
+
+			return err
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			payload := []Patch{{
+				Op:    "replace",
+				Path:  "/spec/containers/0/image",
+				Value: "myregistry.azurecr.io/google-containers/pause-amd64:3.1",
+			}}
+			payloadBytes, _ := json.Marshal(payload)
+			_, err := cs.CoreV1().Pods(ns.GetName()).Patch(context.TODO(), pod.GetName(), types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+			if err != nil {
+				return err
+			}
+			return nil
+		}).Should(Succeed())
+	})
+
+	It("should allow patching a matching registry after applying with a matching (initContainer)", func() {
+		ns := NewNamespace("")
+
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "container",
+			},
+			Spec: corev1.PodSpec{
+				InitContainers: []corev1.Container{
+					{
+						Name:  "init",
+						Image: "myregistry.azurecr.io/myapp:latest",
+					},
+				},
+				Containers: []corev1.Container{
+					{
+						Name:  "container",
+						Image: "docker.io/google-containers/pause-amd64:3.0",
+					},
+				},
+			},
+		}
+
+		cs := ownerClient(tnt.Spec.Owners[0])
+
+		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
+		TenantNamespaceList(tnt, defaultTimeoutInterval).Should(ContainElement(ns.GetName()))
+
+		EventuallyCreation(func() error {
+			_, err := cs.CoreV1().Pods(ns.Name).Create(context.Background(), pod, metav1.CreateOptions{})
+
+			return err
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			payload := []Patch{{
+				Op:    "replace",
+				Path:  "/spec/initContainers/0/image",
+				Value: "myregistry.azurecr.io/google-containers/pause-amd64:3.1",
+			}}
+			payloadBytes, _ := json.Marshal(payload)
+			_, err := cs.CoreV1().Pods(ns.GetName()).Patch(context.TODO(), pod.GetName(), types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+			if err != nil {
+				return err
+			}
+			return nil
+		}).Should(Succeed())
+	})
+
 	It("should allow using an exact match", func() {
-		ns := NewNamespace("registry-list")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 
 		pod := &corev1.Pod{
@@ -136,7 +328,7 @@ var _ = Describe("enforcing a Container Registry", func() {
 	})
 
 	It("should allow using a regex match", func() {
-		ns := NewNamespace("registry-regex")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 
 		pod := &corev1.Pod{

@@ -8,28 +8,29 @@ package e2e
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	"github.com/clastix/capsule/pkg/api"
 )
 
 var _ = Describe("creating a Namespace for a Tenant with additional metadata", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tenant-metadata",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "gatsby",
 					Kind: "User",
 				},
 			},
-			NamespaceOptions: &capsulev1beta1.NamespaceOptions{
-				AdditionalMetadata: &capsulev1beta1.AdditionalMetadataSpec{
+			NamespaceOptions: &capsulev1beta2.NamespaceOptions{
+				AdditionalMetadata: &api.AdditionalMetadataSpec{
 					Labels: map[string]string{
 						"k8s.io/custom-label":     "foo",
 						"clastix.io/custom-label": "bar",
@@ -53,7 +54,7 @@ var _ = Describe("creating a Namespace for a Tenant with additional metadata", f
 	})
 
 	It("should contain additional Namespace metadata", func() {
-		ns := NewNamespace("namespace-metadata")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 		TenantNamespaceList(tnt, defaultTimeoutInterval).Should(ContainElement(ns.GetName()))
 

@@ -8,31 +8,32 @@ package e2e
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	"github.com/clastix/capsule/pkg/api"
 )
 
 var _ = Describe("creating a LoadBalancer service when it is disabled for Tenant", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "disable-loadbalancer-service",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "amazon",
 					Kind: "User",
 				},
 			},
-			ServiceOptions: &capsulev1beta1.ServiceOptions{
-				AllowedServices: &capsulev1beta1.AllowedServices{
-					LoadBalancer: pointer.BoolPtr(false),
+			ServiceOptions: &api.ServiceOptions{
+				AllowedServices: &api.AllowedServices{
+					LoadBalancer: pointer.Bool(false),
 				},
 			},
 		},
@@ -49,7 +50,7 @@ var _ = Describe("creating a LoadBalancer service when it is disabled for Tenant
 	})
 
 	It("should fail creating a service with LoadBalancer type", func() {
-		ns := NewNamespace("disable-loadbalancer-service")
+		ns := NewNamespace("")
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 

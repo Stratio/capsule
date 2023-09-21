@@ -7,31 +7,30 @@ package e2e
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	"github.com/clastix/capsule/pkg/utils"
 )
 
 var _ = Describe("creating an Ingress with a wildcard when it is denied for the Tenant", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "denied-ingress-wildcard",
 			Annotations: map[string]string{
 				"capsule.clastix.io/deny-wildcard": "true",
 			},
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "scott",
 					Kind: "User",
@@ -54,13 +53,12 @@ var _ = Describe("creating an Ingress with a wildcard when it is denied for the 
 
 	It("should fail creating an extensions/v1beta1 Ingress with a wildcard hostname", func() {
 		if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-			missingAPIError := &meta.NoKindMatchError{}
-			if errors.As(err, &missingAPIError) {
+			if utils.IsUnsupportedAPI(err) {
 				Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 			}
 		}
 
-		ns := NewNamespace("extensions-v1beta1")
+		ns := NewNamespace("")
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 
@@ -135,13 +133,12 @@ var _ = Describe("creating an Ingress with a wildcard when it is denied for the 
 
 	It("should fail creating an networking.k8s.io/v1beta1 Ingress with a wildcard hostname", func() {
 		if err := k8sClient.List(context.Background(), &networkingv1beta1.IngressList{}); err != nil {
-			missingAPIError := &meta.NoKindMatchError{}
-			if errors.As(err, &missingAPIError) {
+			if utils.IsUnsupportedAPI(err) {
 				Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 			}
 		}
 
-		ns := NewNamespace("networking-v1beta1")
+		ns := NewNamespace("")
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 
@@ -216,13 +213,12 @@ var _ = Describe("creating an Ingress with a wildcard when it is denied for the 
 
 	It("should fail creating an networking.k8s.io/v1 Ingress with a wildcard hostname", func() {
 		if err := k8sClient.List(context.Background(), &networkingv1.IngressList{}); err != nil {
-			missingAPIError := &meta.NoKindMatchError{}
-			if errors.As(err, &missingAPIError) {
+			if utils.IsUnsupportedAPI(err) {
 				Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 			}
 		}
 
-		ns := NewNamespace("networking-v1")
+		ns := NewNamespace("")
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 

@@ -24,7 +24,7 @@ Bill creates a new tenant `oil` in the CaaS management portal according to the t
 
 ```yaml
 kubectl create -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -88,7 +88,7 @@ In the example above, Bill assigned the ownership of `oil` tenant to `alice` use
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -107,7 +107,7 @@ The tenant manifest is modified as in the following:
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -133,7 +133,7 @@ The tenant manifest is modified as in the following:
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -154,7 +154,7 @@ yes
 The service account has to be part of Capsule group, so Bill has to set in the `CapsuleConfiguration`
 
 ```yaml
-apiVersion: capsule.clastix.io/v1alpha1
+apiVersion: capsule.clastix.io/v1beta2
 kind: CapsuleConfiguration
 metadata:
   name: default
@@ -242,18 +242,18 @@ For example, assign user `Joe` the tenant ownership with only [view](https://kub
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
-  annotations:
-    clusterrolenames.capsule.clastix.io/user.joe: view
 spec:
   owners:
   - name: alice
     kind: User
   - name: joe
     kind: User
+    clusterRoles:
+      - view
 EOF
 ```
 
@@ -262,9 +262,9 @@ you'll see the new Role Bindings assigned to Joe:
 ```
 kubectl -n oil-production get rolebindings
 NAME                                      ROLE                                    AGE
-capsule-oil-0-admin                       ClusterRole/admin                       8d
-capsule-oil-1-capsule-namespace-deleter   ClusterRole/capsule-namespace-deleter   8d
-capsule-oil-2-view                        ClusterRole/edit                        5s
+capsule-oil-0-admin                       ClusterRole/admin                       3s
+capsule-oil-1-capsule-namespace-deleter   ClusterRole/capsule-namespace-deleter   3s
+capsule-oil-2-view                        ClusterRole/view                        3s
 ```
 
 so that Joe can only view resources in the tenant namespaces:
@@ -274,7 +274,8 @@ kubectl --as joe --as-group capsule.clastix.io auth can-i delete pods -n oil-mar
 no
 ```
 
-> Please, note that, despite created with more restricted permissions, a tenant owner can still create namespaces in the tenant because he belongs to the `capsule.clastix.io` group. If you want a user not acting as tenant owner, but still operating in the tenant, you can assign additional `RoleBindings` without assigning him the tenant ownership.
+> Please, note that, despite created with more restricted permissions, a tenant owner can still create namespaces in the tenant because he belongs to the `capsule.clastix.io` group.
+> If you want a user not acting as tenant owner, but still operating in the tenant, you can assign additional `RoleBindings` without assigning him the tenant ownership.
 
 Custom ClusterRoles are also supported. Assuming the cluster admin creates:
 
@@ -295,18 +296,19 @@ These permissions can be granted to Joe
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
-  annotations:
-    clusterrolenames.capsule.clastix.io/user.joe: view,prometheus-servicemonitors-viewer
 spec:
   owners:
   - name: alice
     kind: User
   - name: joe
     kind: User
+    clusterRoles:
+      - view
+      - prometheus-servicemonitors-viewer
 EOF
 ```
 
@@ -315,50 +317,11 @@ For the given configuration, the resulting RoleBinding resources are the followi
 ```
 kubectl -n oil-production get rolebindings
 NAME                                              ROLE                                            AGE
-capsule-oil-0-admin                               ClusterRole/admin                               8d
-capsule-oil-1-capsule-namespace-deleter           ClusterRole/capsule-namespace-deleter           8d
-capsule-oil-2-view                                ClusterRole/view                                11m
-capsule-oil-3-prometheus-servicemonitors-viewer   ClusterRole/prometheus-servicemonitors-viewer   18s
+capsule-oil-0-admin                               ClusterRole/admin                               90s
+capsule-oil-1-capsule-namespace-deleter           ClusterRole/capsule-namespace-deleter           90s
+capsule-oil-2-view                                ClusterRole/view                                90s
+capsule-oil-3-prometheus-servicemonitors-viewer   ClusterRole/prometheus-servicemonitors-viewer   25s
 ```
-
-> The pattern for the annotation is `clusterrolenames.capsule.clastix.io/${KIND}.${NAME}`.
-> The placeholders `${KIND}` and `${NAME}` are referring to the Tenant Owner specification fields, both lower-cased.
-> 
-> In the case of users that are identified using their email address, the symbol `@` wouldn't be supported by the RFC 1123.
-> For such cases, the `@` symbol can be replaced with the placeholder `__AT__`.
-> 
-> ```yaml
-> apiVersion: capsule.clastix.io/v1beta1
-> kind: Tenant
-> metadata:
->   annotations:
->     clusterrolenames.capsule.clastix.io/alice__AT__clastix.io: editor,manager
-> spec:
->   owners:
->     - kind: User
->       name: alice@org.tld
->     - kind: User
->       name: alice@clastix.io
-> ```
-> 
-> Instead, with the resulting annotation key exceeding 63 characters length, the zero-based index of the owner can be specified as follows:
-> 
-> ```yaml
-> apiVersion: capsule.clastix.io/v1beta1
-> kind: Tenant
-> metadata:
->   annotations:
->     clusterrolenames.capsule.clastix.io/1: editor,manager
-> spec:
->   owners:
->     - kind: User
->       name: alice@org.tld
->     - kind: User
->       name: very-long-user-name-that-breaks-rfc-1123@org.tld
-> ```
-> 
-> This latter example will assign the roles `editor` and `manager`, assigned to the user `very-long-user-name-that-breaks-rfc-1123@org.tld`.
-
 
 ### Assign additional Role Bindings
 The tenant owner acts as admin of tenant namespaces. Other users can operate inside the tenant namespaces with different levels of permissions and authorizations. 
@@ -382,7 +345,7 @@ These permissions can be granted to a user without giving the role of tenant own
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -421,7 +384,7 @@ The cluster admin, can control how many namespaces Alice, creates by setting a q
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -454,7 +417,8 @@ status:
     oil-development
     oil-production
     oil-test
-  size:  3 # current namespace count
+  Size:   3 # current namespace count
+  State:  Active
 ...
 ```
 
@@ -476,7 +440,7 @@ Bill, the cluster admin, creates multiple tenants having `alice` as owner:
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -491,7 +455,7 @@ and
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: gas
@@ -506,7 +470,7 @@ Alternatively, the ownership can be assigned to a group called `oil-and-gas`:
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -521,7 +485,7 @@ and
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: gas
@@ -564,7 +528,7 @@ Set resources quota for each namespace in the Alice's tenant by defining them in
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -716,7 +680,7 @@ By setting enforcement at the namespace level, i.e. `spec.resourceQuotas.scope=N
 Bill, the cluster admin, can also set Limit Ranges for each namespace in Alice's tenant by defining limits for pods and containers in the tenant spec:
 
 ```yaml
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -724,70 +688,87 @@ spec:
 ...
   limitRanges:
     items:
-    - type: Pod
-      min:
-        cpu: "50m"
-        memory: "5Mi"
-      max:
-        cpu: "1"
-        memory: "1Gi"
-    - type: Container
-      defaultRequest:
-        cpu: "100m"
-        memory: "10Mi"
-      default:
-        cpu: "200m"
-        memory: "100Mi"
-      min:
-        cpu: "50m"
-        memory: "5Mi"
-      max:
-        cpu: "1"
-        memory: "1Gi"
-    - type: PersistentVolumeClaim
-      min:
-        storage: "1Gi"
-      max:
-        storage: "10Gi"
+      - limits:
+          - type: Pod
+            min:
+              cpu: "50m"
+              memory: "5Mi"
+            max:
+              cpu: "1"
+              memory: "1Gi"
+      - limits:
+          - type: Container
+            defaultRequest:
+              cpu: "100m"
+              memory: "10Mi"
+            default:
+              cpu: "200m"
+              memory: "100Mi"
+            min:
+              cpu: "50m"
+              memory: "5Mi"
+            max:
+              cpu: "1"
+              memory: "1Gi"
+      - limits:
+          - type: PersistentVolumeClaim
+            min:
+              storage: "1Gi"
+            max:
+              storage: "10Gi"
 ```
 
 Limits will be inherited by all the namespaces created by Alice. In our case, when Alice creates the namespace `oil-production`, Capsule creates the following:
  
 ```yaml
-kind: LimitRange
 apiVersion: v1
+kind: LimitRange
 metadata:
-  name: limits
+  name: capsule-oil-0
   namespace: oil-production
-  labels:
-    tenant: oil
 spec:
   limits:
-  - type: Pod
-    min:
-      cpu: "50m"
-      memory: "5Mi"
-    max:
-      cpu: "1"
-      memory: "1Gi"
-  - type: Container
-    defaultRequest:
-      cpu: "100m"
-      memory: "10Mi"
-    default:
-      cpu: "200m"
-      memory: "100Mi"
-    min:
-      cpu: "50m"
-      memory: "5Mi"
-    max:
-      cpu: "1"
-      memory: "1Gi"
-  - type: PersistentVolumeClaim
-    min:
-      storage: "1Gi"
-    max:
-      storage: "10Gi"
+    - max:
+        cpu: "1"
+        memory: 1Gi
+      min:
+        cpu: 50m
+        memory: 5Mi
+      type: Pod
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: capsule-oil-1
+  namespace: oil-production
+spec:
+  limits:
+    - default:
+        cpu: 200m
+        memory: 100Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 10Mi
+      max:
+        cpu: "1"
+        memory: 1Gi
+      min:
+        cpu: 50m
+        memory: 5Mi
+      type: Container
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: capsule-oil-2
+  namespace: oil-production
+spec:
+  limits:
+    - max:
+        storage: 10Gi
+      min:
+        storage: 1Gi
+      type: PersistentVolumeClaim
 ```
 
 > Note: being the limit range specific of single resources, there is no aggregate to count.
@@ -816,7 +797,7 @@ To prevent misuses of Pod Priority Class, Bill, the cluster admin, can enforce t
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -826,17 +807,99 @@ spec:
     kind: User
   priorityClasses:
     allowed:
-    - default
+    - custom
     allowedRegex: "^tier-.*$"
+    matchLabels:
+      env: "production"
 EOF
 ```
 
 With the said Tenant specification, Alice can create a Pod resource if `spec.priorityClassName` equals to:
 
-- `default`
+- `custom`
 - `tier-gold`, `tier-silver`, or `tier-bronze`, since these compile the allowed regex. 
+- Any PriorityClass which has the label `env` with the value `production`
 
 If a Pod is going to use a non-allowed _Priority Class_, it will be rejected by the Validation Webhook enforcing it.
+
+### Assign Pod Priority Class as tenant default
+
+It's possible to assign each tenant a PriorityClass which will be used, if no PriorityClass is set on pod basis:
+
+```yaml
+kubectl apply -f - << EOF
+apiVersion: capsule.clastix.io/v1beta2
+kind: Tenant
+metadata:
+  name: oil
+spec:
+  owners:
+  - name: alice
+    kind: User
+  priorityClasses:
+    allowed:
+    - custom
+    default: "tenant-default"
+    allowedRegex: "^tier-.*$"
+    matchLabels:
+      env: "production"
+EOF
+```
+
+Here's how the new PriorityClass could look like
+
+```yaml
+kubectl apply -f - << EOF
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: tenant-default
+value: 1313
+preemptionPolicy: Never
+globalDefault: false
+description: "This is the default PriorityClass for the oil-tenant"
+EOF
+```
+
+If a Pod has no value for `spec.priorityClassName`, the default value for PriorityClass (`tenant-default`) will be used.
+
+> This feature allows specifying a custom default value on a Tenant basis, bypassing the global cluster default (`globalDefault=true`) that acts only at the cluster level.
+
+**Note**: This feature supports type `PriorityClass` only on API version `scheduling.k8s.io/v1`
+
+## Assign Pod Runtime Classes
+
+Pods can be assigned different runtime classes. With the assigned runtime you can control Container Runtime Interface (CRI) is used for each pod.
+See [Kubernetes documentation](https://kubernetes.io/docs/concepts/containers/runtime-class/) for more information. 
+
+To prevent misuses of Pod Runtime Classes, Bill, the cluster admin, can enforce the allowed Pod Runtime Class at tenant level:
+
+```yaml
+kubectl apply -f - << EOF
+apiVersion: capsule.clastix.io/v1beta2
+kind: Tenant
+metadata:
+  name: oil
+spec:
+  owners:
+  - name: alice
+    kind: User
+  runtimeClasses:
+    allowed:
+    - legacy
+    allowedRegex: "^hardened-.*$"
+    matchLabels:
+      env: "production"
+EOF
+```
+
+With the said Tenant specification, Alice can create a Pod resource if `spec.runtimeClassName` equals to:
+
+- `legacy`
+- e.g.: `hardened-crio` or `hardened-containerd`, since these compile the allowed regex (`^hardened-.*$"`).
+- any RuntimeClass which has the label `env` with the value `production`
+
+If a Pod is going to use a non-allowed _Runtime Class_, it will be rejected by the Validation Webhook enforcing it.
 
 ## Assign Nodes Pool
 Bill, the cluster admin, can dedicate a pool of worker nodes to the `oil` tenant, to isolate the tenant applications from other noisy neighbors.
@@ -857,7 +920,7 @@ The label `pool=oil` is defined as node selector in the tenant manifest:
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -876,7 +939,7 @@ The Capsule controller makes sure that any namespace created in the tenant has t
 Multiple node selector labels can be defined as in the following snippet:
 
 ```yaml
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -907,7 +970,7 @@ Bill can assign a set of dedicated Ingress Classes to the `oil` tenant to force 
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -918,12 +981,20 @@ spec:
   ingressOptions:
     allowedClasses:
       allowed:
-      - default
+      - legacy
       allowedRegex: ^\w+-lb$
+      matchLabels:
+        env: "production"
 EOF
 ```
 
-Capsule assures that all Ingresses created in the tenant can use only one of the valid Ingress Classes.
+With the said Tenant specification, Alice can create a Ingress resource if `spec.ingressClassName` or `metadata.annotations."kubernetes.io/ingress.class"` equals to:
+
+- `legacy`
+- eg. `haproxy-lb` or `nginx-lb`, since these compile the allowed regex (`^\w+-lb$`).
+- Any IngressClass which has the label `env` with the value `production`
+
+If an Ingress is going to use a non-allowed _IngressClass_, it will be rejected by the Validation Webhook enforcing it.
 
 Alice can create an Ingress using only an allowed Ingress Class:
 
@@ -935,27 +1006,81 @@ metadata:
   name: nginx
   namespace: oil-production
   annotations:
-    kubernetes.io/ingress.class: default
+    kubernetes.io/ingress.class: legacy
 spec:
   rules:
   - host: oil.acmecorp.com
     http:
       paths:
       - backend:
-          serviceName: nginx
-          servicePort: 80
+          service:
+            name: nginx
+            port:
+              number: 80
         path: /
+        pathType: ImplementationSpecific
 EOF
 ```
 
 Any attempt of Alice to use a non-valid Ingress Class, or missing it, is denied by the Validation Webhook enforcing it.
+
+### Assign Ingress Class as tenant default
+
+It's possible to assign each tenant an Ingress Class which will be used, if a class is not set on ingress basis:
+
+```yaml
+kubectl apply -f - << EOF
+apiVersion: capsule.clastix.io/v1beta2
+kind: Tenant
+metadata:
+  name: oil
+spec:
+  owners:
+  - name: alice
+    kind: User
+  ingressOptions:
+    allowedClasses:
+      allowed:
+      - legacy
+      default: "tenant-default"
+      allowedRegex: ^\w+-lb$
+      matchLabels:
+        env: "production"
+EOF
+```
+
+Here's how the Tenant default IngressClass could look like:
+
+```yaml
+kubectl apply -f - << EOF
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+  name: tenant-default
+  annotations:
+    ingressclass.kubernetes.io/is-default-class: "false"
+spec:
+  controller: k8s.io/customer-nginx
+EOF
+```
+
+If an Ingress has no value for `spec.ingressClassName` or `metadata.annotations."kubernetes.io/ingress.class"`, the `tenant-default` IngressClass is automatically applied to the Ingress resource.
+
+> This feature allows specifying a custom default value on a Tenant basis, bypassing the global cluster default (with the annotation `metadata.annotations.ingressclass.kubernetes.io/is-default-class=true`) that acts only at the cluster level.
+> 
+> More information: [Default IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#default-ingress-class)
+
+**Note**: This feature is offered only by API type `IngressClass` in group `networking.k8s.io` version `v1`.
+However, resource `Ingress` is supported in `networking.k8s.io/v1` and `networking.k8s.io/v1beta1`
 
 ## Assign Ingress Hostnames
 Bill can control ingress hostnames in the `oil` tenant to force the applications to be published only using the given hostname or set of hostnames: 
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1011,7 +1136,7 @@ In a multi-tenant environment, as more and more ingresses are defined, there is 
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1085,7 +1210,7 @@ Persistent storage infrastructure is provided to tenants. Different types of sto
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1098,8 +1223,16 @@ spec:
     - ceph-rbd
     - ceph-nfs
     allowedRegex: "^ceph-.*$"
+    matchLabels:
+      env: "production"
 EOF
 ```
+
+With the said Tenant specification, Alice can create a Persistent Volume Claims if `spec.storageClassName` equals to:
+
+- `ceph-rbd` or `ceph-nfs`
+- eg. `ceph-hdd` or `ceph-ssd`, since these compile the allowed regex (`^ceph-.*$`).
+- Any IngressClass which has the label `env` with the value `production`
 
 Capsule assures that all Persistent Volume Claims created by Alice will use only one of the valid storage classes:
 
@@ -1120,7 +1253,55 @@ spec:
 EOF
 ```
 
-Any attempt of Alice to use a non-valid Storage Class, or missing it, is denied by the Validation Webhook enforcing it.
+If a Persistent Volume Claim is going to use a non-allowed _Storage Class_, it will be rejected by the Validation Webhook enforcing it.
+
+### Assign Storage Class as tenant default
+
+It's possible to assign each tenant a StorageClass which will be used, if no value is set on Persistent Volume Claim basis:
+
+```yaml
+kubectl apply -f - << EOF
+apiVersion: capsule.clastix.io/v1beta2
+kind: Tenant
+metadata:
+  name: oil
+spec:
+  owners:
+  - name: alice
+    kind: User
+  storageClasses:
+    default: "tenant-default"
+    allowed:
+    - ceph-rbd
+    - ceph-nfs
+    allowedRegex: "^ceph-.*$"
+    matchLabels:
+      env: "production"
+EOF
+```
+
+Here's how the new Storage Class could look like
+
+```yaml
+kubectl apply -f - << EOF
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: tenant-default
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+EOF
+```
+
+If a Persistent Volume Claim has no value for `spec.storageClassName` the `tenant-default` value will be used on new Persistent Volume Claim resources.
+
+> This feature allows specifying a custom default value on a Tenant basis, bypassing the global cluster default (`.metadata.annotations.storageclass.kubernetes.io/is-default-class=true`) that acts only at the cluster level.
+>
+> See the [Default Storage Class](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/) section on Kubernetes documentation.
+
+**Note**: This feature supports type `StorageClass` only on API version `storage.k8s.io/v1`
 
 ## Assign Network Policies
 Kubernetes network policies control network traffic between namespaces and between pods in the same namespace. Bill, the cluster admin, can enforce network traffic isolation between different tenants while leaving to Alice, the tenant owner, the freedom to set isolation between namespaces in the same tenant or even between pods in the same namespace.
@@ -1133,7 +1314,7 @@ Bill can set network policies in the tenant manifest, according to the requireme
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1234,7 +1415,7 @@ To avoid this kind of attack, Bill, the cluster admin, can force Alice, the tena
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1260,7 +1441,7 @@ The spec `containerRegistries` addresses this task and can provide a combination
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1316,7 +1497,7 @@ Bill can assign this role to any namespace in the Alice's tenant by setting it i
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1371,7 +1552,7 @@ Starting from Capsule **v0.1.1**, this can be done using a special annotation in
 Imagine the case where a Custom Resource named `MySQL` in the API group `databases.acme.corp/v1` usage must be limited in the Tenant `oil`: this can be done as follows.
 
 ```yaml
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1398,7 +1579,7 @@ spec:
 When `alice` will create a `MySQL` instance in one of their Tenant Namespace, the Cluster Administrator can easily retrieve the overall usage.
 
 ```yaml
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1420,7 +1601,7 @@ Assigns additional labels and annotations to all namespaces created in the `oil`
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1452,7 +1633,7 @@ metadata:
     capsule.clastix.io/backup: "true"
   name: oil-production
   ownerReferences:
-  - apiVersion: capsule.clastix.io/v1beta1
+  - apiVersion: capsule.clastix.io/v1beta2
     blockOwnerDeletion: true
     controller: true
     kind: Tenant
@@ -1470,7 +1651,7 @@ Assigns additional labels and annotations to all services created in the `oil` t
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1516,20 +1697,36 @@ Bill needs to cordon a Tenant and its Namespaces for several reasons:
 
 With this said, the Tenant Owner and the related Service Account living into managed Namespaces, cannot proceed to any update, create or delete action.
 
-This is possible just labeling the Tenant as follows:
+This is possible by just toggling the specific Tenant specification:
 
 ```shell
-kubectl label tenant oil capsule.clastix.io/cordon=enabled
-tenant oil labeled
+apiVersion: capsule.clastix.io/v1beta2
+kind: Tenant
+metadata:
+  name: oil
+spec:
+  cordoned: true
+  owners:
+  - kind: User
+    name: alice
 ```
 
 Any operation performed by Alice, the Tenant Owner, will be rejected by the Admission controller.
 
-Uncordoning can be done by removing the said label:
+Uncordoning can be done by removing the said specification key:
 
 ```shell
-$ kubectl label tenant oil capsule.clastix.io/cordon-
-tenant.capsule.clastix.io/oil labeled
+$ cat <<EOF | kubectl apply -f -
+apiVersion: capsule.clastix.io/v1beta2
+kind: Tenant
+metadata:
+  name: oil
+spec:
+  cordoned: false
+  owners:
+  - kind: User
+    name: alice
+EOF
 
 $ kubectl --as alice --as-group capsule.clastix.io -n oil-dev create deployment nginx --image nginx
 deployment.apps/nginx created
@@ -1557,7 +1754,7 @@ Bill, the cluster admin, can block the creation of services with `NodePort` serv
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1578,7 +1775,7 @@ Service with the type of `ExternalName` has been found subject to many security 
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1600,7 +1797,7 @@ Same as previously, the Service of type of `LoadBalancer` could be blocked for v
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
@@ -1627,16 +1824,16 @@ To avoid this kind of problems, Bill can deny the use of wildcard hostnames in t
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
-  annotations:
-    capsule.clastix.io/deny-wildcard: true
 spec:
   owners:
-  - name: alice
-    kind: User
+    - name: alice
+      kind: User
+  ingressOptions:
+    allowWildcardHostnames: false
 EOF
 ```
 
@@ -1652,16 +1849,22 @@ Bill, the cluster admin, can deny Alice to add specific labels and annotations o
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
-  annotations:
-    capsule.clastix.io/forbidden-namespace-labels: foo.acme.net,bar.acme.net
-    capsule.clastix.io/forbidden-namespace-labels-regexp: .*.acme.net
-    capsule.clastix.io/forbidden-namespace-annotations: foo.acme.net,bar.acme.net
-    capsule.clastix.io/forbidden-namespace-annotations-regexp: .*.acme.net
 spec:
+  namespaceOptions:
+    forbiddenAnnotations:
+      denied:
+          - foo.acme.net
+          - bar.acme.net
+      deniedRegex: .*.acme.net 
+    forbiddenLabels:
+      denied:
+          - foo.acme.net
+          - bar.acme.net
+      deniedRegex: .*.acme.net
   owners:
   - name: alice
     kind: User
@@ -1680,16 +1883,22 @@ Bill, the cluster admin, can deny Tenant Owners to add or modify specific labels
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1alpha1
+apiVersion: capsule.clastix.io/v1beta2
 kind: CapsuleConfiguration
 metadata:
-  name: default
-  annotations:
-    capsule.clastix.io/forbidden-node-labels: foo.acme.net,bar.acme.net
-    capsule.clastix.io/forbidden-node-labels-regexp: .*.acme.net
-    capsule.clastix.io/forbidden-node-annotations: foo.acme.net,bar.acme.net
-    capsule.clastix.io/forbidden-node-annotations-regexp: .*.acme.net
+  name: default 
 spec:
+  nodeMetadata:
+    forbiddenAnnotations:
+      denied:
+        - foo.acme.net
+        - bar.acme.net
+      deniedRegex: .*.acme.net
+    forbiddenLabels:
+      denied:
+        - foo.acme.net
+        - bar.acme.net
+      deniedRegex: .*.acme.net
   userGroups:
     - capsule.clastix.io
     - system:serviceaccounts:default
@@ -1707,21 +1916,217 @@ EOF
 ## Protecting tenants from deletion
 
 Sometimes it is important to protect business critical tenants from accidental deletion. 
-This can be achieved by adding `capsule.clastix.io/protected` annotation on the tenant:
+This can be achieved by toggling `preventDeletion` specification key on the tenant:
 
 ```yaml
 kubectl apply -f - << EOF
-apiVersion: capsule.clastix.io/v1beta1
+apiVersion: capsule.clastix.io/v1beta2
 kind: Tenant
 metadata:
   name: oil
-  annotations:
-    capsule.clastix.io/protected: ""
 spec:
   owners:
   - name: alice
     kind: User
+  preventDeletion: true
 EOF
+```
+
+## Replicating resources across a set of Tenants' Namespaces
+
+When developing an Internal Developer Platform the Platform Administrator could want to propagate a set of resources.
+These could be Secret, ConfigMap, or other kinds of resources that the tenants would require to use the platform.
+
+> A generic example could be the container registry secrets, especially in the context where the Tenants can just use a specific registry.
+
+Starting from Capsule v0.2.0, a new set of Custom Resource Definitions have been introduced, such as the `GlobalTenantResource`, let's start with a potential use-case using the personas described at the beginning of this document.
+
+**Bill** created the Tenants for **Alice** using the `Tenant` CRD, and labels these resources using the following command:
+
+```
+$: kubectl label tnt/oil energy=fossil
+tenant oil labeled
+
+$: kubectl label tnt/gas energy=fossil
+tenant oil labeled
+```
+
+In the said scenario, these Tenants must use container images from a trusted registry, and that would require the usage of specific credentials for the image pull.
+
+The said container registry is deployed in the cluster in the namespace `harbor-system`, and this Namespace contains all image pull secret for each Tenant, e.g.: a secret named `harbor-system/fossil-pull-secret` as follows.
+
+```
+$: kubectl -n harbor-system get secret --show-labels
+NAME                 TYPE     DATA   AGE   LABELS
+fossil-pull-secret   Opaque   1      28s   tenant=fossil
+```
+
+These credentials would be distributed to the Tenant owners manually, or vice-versa, the owners would require those.
+Such a scenario would be against the concept of the self-service solution offered by Capsule, and **Bill** can solve this by creating the `GlobalTenantResource` as follows.
+
+```yaml
+apiVersion: capsule.clastix.io/v1beta2
+kind: GlobalTenantResource
+metadata:
+  name: fossil-pull-secrets
+spec:
+  tenantSelector:
+    matchLabels:
+      energy: fossil
+  resyncPeriod: 60s
+  resources:
+    - namespacedItems:
+        - apiVersion: v1
+          kind: Secret
+          namespace: harbor-system
+          selector:
+            matchLabels:
+              tenant: fossil
+```
+
+A full reference of the API is available in the [CRDs API section](/docs/general/crds-apis), just explaining the expected behaviour and the resulting outcome:
+
+> Capsule will select all the Tenant resources according to the key `tenantSelector`.
+> Each object defined in the `namespacedItems` and matching the provided `selector` will be replicated into each Namespace bounded to the selected Tenants.
+> Capsule will check every 60 seconds if the resources are replicated and in sync, as defined in the key `resyncPeriod`.
+
+The `GlobalTenantResource` is a cluster-scoped resource, thus it has been designed for cluster administrators and cannot be used by Tenant owners: for that purpose, the `TenantResource` one can help.
+
+## Replicating resources across Namespaces of a Tenant
+
+Although Capsule is supporting a few amounts of personas, it can be used to allow building an Internal Developer Platform used barely by Tenant owners, or users created by these thanks to Service Account.
+
+In a such scenario, a Tenant Owner would like to distribute resources across all the Namespace of their Tenant, without the need to establish a manual procedure, or the need for writing a custom automation.
+
+The Namespaced-scope API `TenantResource` allows to replicate resources across the Tenant's Namespace.
+
+> The Tenant owners must have proper RBAC configured in order to create, get, update, and delete their `TenantResource` CRD instances.
+> This can be achieved using the Tenant key `additionalRoleBindings` or a custom Tenant owner role, compared to the default one (`admin`).
+
+For our example, **Alice**, the project lead for the `solar` tenant, wants to provision automatically a **DataBase** resource for each Namespace of their Tenant: these are the Namespace list.
+
+```
+$: kubectl get namespaces -l capsule.clastix.io/tenant=solar --show-labels
+NAME           STATUS   AGE   LABELS
+solar-1        Active   59s   capsule.clastix.io/tenant=solar,environment=production,kubernetes.io/metadata.name=solar-1,name=solar-1
+solar-2        Active   58s   capsule.clastix.io/tenant=solar,environment=production,kubernetes.io/metadata.name=solar-2,name=solar-2
+solar-system   Active   62s   capsule.clastix.io/tenant=solar,kubernetes.io/metadata.name=solar-system,name=solar-system
+```
+
+**Alice** creates a `TenantResource` in the Tenant namespace `solar-system` as follows.
+
+```yaml
+apiVersion: capsule.clastix.io/v1beta2
+kind: TenantResource
+metadata:
+  name: solar-db
+  namespace: solar-system
+spec:
+  resyncPeriod: 60s
+  resources:
+    - namespaceSelector:
+        matchLabels:
+          environment: production
+      rawItems:
+        - apiVersion: postgresql.cnpg.io/v1
+          kind: Cluster
+          metadata:
+            name: postgresql
+          spec:
+            description: PostgreSQL cluster for the Solar project
+            instances: 3
+            postgresql:
+              pg_hba:
+                - hostssl app all all cert
+            primaryUpdateStrategy: unsupervised
+            storage:
+              size: 1Gi
+```
+
+The expected result will be the object `Cluster` for the API version `postgresql.cnpg.io/v1` to get created in all the Solar tenant namespaces matching the label selector declared by the key `namespaceSelector`.
+
+```
+$: kubectl get clusters.postgresql.cnpg.io -A
+NAMESPACE   NAME         AGE   INSTANCES   READY   STATUS                     PRIMARY
+solar-1     postgresql   80s   3           3       Cluster in healthy state   postgresql-1
+solar-2     postgresql   80s   3           3       Cluster in healthy state   postgresql-1
+```
+
+The `TenantResource` object has been created in the namespace `solar-system` that doesn't satisfy the Namespace selector. Furthermore, Capsule will automatically inject the required labels to avoid a `TenantResource` could start polluting other Namespaces.
+
+Eventually, using the key `namespacedItem`, it is possible to reference existing objects to get propagated across the other Tenant namespaces: in this case, a Tenant Owner can just refer to objects in their Namespaces, preventing a possible escalation referring to non owned objects.
+
+As with `GlobalTenantResource`, the full reference of the API is available in the [CRDs API section](/docs/general/crds-apis).
+
+## Preventing PersistentVolume cross mounting across Tenants
+
+Any Tenant owner is able to create a `PersistentVolumeClaim` that, backed by a given _StorageClass_, will provide volumes for their applications.
+
+In most cases, once a `PersistentVolumeClaim` is deleted, the bounded `PersistentVolume` will be recycled due.
+
+However, in some scenarios, the `StorageClass` or the provisioned `PersistentVolume` itself could change the retention policy of the volume, keeping it available for recycling and being consumable for another Pod.
+
+In such a scenario, Capsule enforces the Volume mount only to the Namespaces belonging to the Tenant on which it's been consumed, by adding a label to the Volume as follows.
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    pv.kubernetes.io/provisioned-by: rancher.io/local-path
+  creationTimestamp: "2022-12-22T09:54:46Z"
+  finalizers:
+  - kubernetes.io/pv-protection
+  labels:
+    capsule.clastix.io/tenant: atreides
+  name: pvc-1b3aa814-3b0c-4912-9bd9-112820da38fe
+  resourceVersion: "2743059"
+  uid: 9836ae3e-4adb-41d2-a416-0c45c2da41ff
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 10Gi
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: melange
+    namespace: caladan
+    resourceVersion: "2743014"
+    uid: 1b3aa814-3b0c-4912-9bd9-112820da38fe
+```
+
+Once the `PeristentVolume` become available again, it can be referenced by any `PersistentVolumeClaim` in the `atreides` Tenant Namespace resources.
+
+If another Tenant, like `harkonnen`, tries to use it, it will get an error:
+
+```
+$: k describe pv pvc-9788f5e4-1114-419b-a830-74e7f9a33f5d
+Name:              pvc-9788f5e4-1114-419b-a830-74e7f9a33f5d
+Labels:            capsule.clastix.io/tenant=atreides
+Annotations:       pv.kubernetes.io/provisioned-by: rancher.io/local-path
+Finalizers:        [kubernetes.io/pv-protection]
+StorageClass:      standard
+Status:            Available
+...
+
+$: cat /tmp/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: melange
+  namespace: harkonnen
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+  volumeName: pvc-9788f5e4-1114-419b-a830-74e7f9a33f5d
+
+$: k apply -f /tmp/pvc.yaml
+Error from server: error when creating "/tmp/pvc.yaml": admission webhook "pvc.capsule.clastix.io" denied the request: PeristentVolume pvc-9788f5e4-1114-419b-a830-74e7f9a33f5d cannot be used by the following Tenant, preventing a cross-tenant mount
 ```
 
 ---

@@ -31,6 +31,8 @@ type CapsuleConfiguration struct {
 	Spec CapsuleConfigurationSpec `json:"spec,omitempty"`
 }
 
+func (in *CapsuleConfiguration) Hub() {}
+
 // +kubebuilder:object:root=true
 
 // CapsuleConfigurationList contains a list of CapsuleConfiguration.

@@ -7,34 +7,34 @@ package e2e
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	"github.com/clastix/capsule/pkg/api"
+	"github.com/clastix/capsule/pkg/utils"
 )
 
 var _ = Describe("when Tenant handles Ingress hostnames", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ingress-hostnames",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "hostname",
 					Kind: "User",
 				},
 			},
-			IngressOptions: capsulev1beta1.IngressOptions{
-				AllowedHostnames: &capsulev1beta1.AllowedListSpec{
+			IngressOptions: capsulev1beta2.IngressOptions{
+				AllowedHostnames: &api.AllowedListSpec{
 					Exact: []string{"sigs.k8s.io", "operator.sdk", "domain.tld"},
 					Regex: `.*\.clastix\.io`,
 				},
@@ -120,7 +120,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 	})
 
 	It("should block a non allowed Hostname", func() {
-		ns := NewNamespace("disallowed-hostname-networking")
+		ns := NewNamespace("")
 		cs := ownerClient(tnt.Spec.Owners[0])
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
@@ -128,8 +128,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 
 		By("testing networking.k8s.io", func() {
 			if err := k8sClient.List(context.Background(), &networkingv1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}
@@ -143,7 +142,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 	})
 
 	It("should block a non allowed Hostname", func() {
-		ns := NewNamespace("disallowed-hostname-extensions")
+		ns := NewNamespace("")
 		cs := ownerClient(tnt.Spec.Owners[0])
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
@@ -151,8 +150,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 
 		By("testing extensions", func() {
 			if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}
@@ -166,7 +164,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 	})
 
 	It("should allow Hostnames in list", func() {
-		ns := NewNamespace("allowed-hostname-list-networking")
+		ns := NewNamespace("")
 		cs := ownerClient(tnt.Spec.Owners[0])
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
@@ -174,8 +172,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 
 		By("testing networking.k8s.io", func() {
 			if err := k8sClient.List(context.Background(), &networkingv1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}
@@ -191,7 +188,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 	})
 
 	It("should allow Hostnames in list", func() {
-		ns := NewNamespace("allowed-hostname-list-extensions")
+		ns := NewNamespace("")
 		cs := ownerClient(tnt.Spec.Owners[0])
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
@@ -199,8 +196,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 
 		By("testing extensions", func() {
 			if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}
@@ -216,7 +212,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 	})
 
 	It("should allow Hostnames in regex", func() {
-		ns := NewNamespace("allowed-hostname-regex-networking")
+		ns := NewNamespace("")
 		cs := ownerClient(tnt.Spec.Owners[0])
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
@@ -224,8 +220,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 
 		By("testing networking.k8s.io", func() {
 			if err := k8sClient.List(context.Background(), &networkingv1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}
@@ -241,7 +236,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 	})
 
 	It("should allow Hostnames in regex", func() {
-		ns := NewNamespace("allowed-hostname-regex-extensions")
+		ns := NewNamespace("")
 		cs := ownerClient(tnt.Spec.Owners[0])
 
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
@@ -249,8 +244,7 @@ var _ = Describe("when Tenant handles Ingress hostnames", func() {
 
 		By("testing extensions", func() {
 			if err := k8sClient.List(context.Background(), &extensionsv1beta1.IngressList{}); err != nil {
-				missingAPIError := &meta.NoKindMatchError{}
-				if errors.As(err, &missingAPIError) {
+				if utils.IsUnsupportedAPI(err) {
 					Skip(fmt.Sprintf("Running test due to unsupported API kind: %s", err.Error()))
 				}
 			}

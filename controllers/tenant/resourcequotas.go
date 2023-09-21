@@ -1,3 +1,6 @@
+// Copyright 2020-2021 Clastix Labs
+// SPDX-License-Identifier: Apache-2.0
+
 package tenant
 
 import (
@@ -16,7 +19,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	"github.com/clastix/capsule/pkg/api"
+	"github.com/clastix/capsule/pkg/utils"
 )
 
 // When the Resource Budget assigned to a Tenant is Tenant-scoped we have to rely on the ResourceQuota resources to
@@ -31,20 +36,19 @@ import (
 // the mutateFn along with the CreateOrUpdate to don't perform the update since resources are identical.
 //
 // In case of Namespace-scoped Resource Budget, we're just replicating the resources across all registered Namespaces.
-// nolint:gocognit
-func (r *Manager) syncResourceQuotas(ctx context.Context, tenant *capsulev1beta1.Tenant) (err error) {
+func (r *Manager) syncResourceQuotas(ctx context.Context, tenant *capsulev1beta2.Tenant) (err error) { //nolint:gocognit
 	// getting ResourceQuota labels for the mutateFn
 	var tenantLabel, typeLabel string
 
-	if tenantLabel, err = capsulev1beta1.GetTypeLabel(&capsulev1beta1.Tenant{}); err != nil {
+	if tenantLabel, err = utils.GetTypeLabel(&capsulev1beta2.Tenant{}); err != nil {
 		return err
 	}
 
-	if typeLabel, err = capsulev1beta1.GetTypeLabel(&corev1.ResourceQuota{}); err != nil {
+	if typeLabel, err = utils.GetTypeLabel(&corev1.ResourceQuota{}); err != nil {
 		return err
 	}
-	// nolint:nestif
-	if tenant.Spec.ResourceQuota.Scope == capsulev1beta1.ResourceQuotaScopeTenant {
+	//nolint:nestif
+	if tenant.Spec.ResourceQuota.Scope == api.ResourceQuotaScopeTenant {
 		group := new(errgroup.Group)
 
 		for i, q := range tenant.Spec.ResourceQuota.Items {
@@ -153,15 +157,15 @@ func (r *Manager) syncResourceQuotas(ctx context.Context, tenant *capsulev1beta1
 	return group.Wait()
 }
 
-func (r *Manager) syncResourceQuota(ctx context.Context, tenant *capsulev1beta1.Tenant, namespace string, keys []string) (err error) {
+func (r *Manager) syncResourceQuota(ctx context.Context, tenant *capsulev1beta2.Tenant, namespace string, keys []string) (err error) {
 	// getting ResourceQuota labels for the mutateFn
 	var tenantLabel, typeLabel string
 
-	if tenantLabel, err = capsulev1beta1.GetTypeLabel(&capsulev1beta1.Tenant{}); err != nil {
+	if tenantLabel, err = utils.GetTypeLabel(&capsulev1beta2.Tenant{}); err != nil {
 		return err
 	}
 
-	if typeLabel, err = capsulev1beta1.GetTypeLabel(&corev1.ResourceQuota{}); err != nil {
+	if typeLabel, err = utils.GetTypeLabel(&corev1.ResourceQuota{}); err != nil {
 		return err
 	}
 	// Pruning resource of non-requested resources
@@ -188,7 +192,7 @@ func (r *Manager) syncResourceQuota(ctx context.Context, tenant *capsulev1beta1.
 				target.Spec.Scopes = resQuota.Scopes
 				target.Spec.ScopeSelector = resQuota.ScopeSelector
 				// In case of Namespace scope for the ResourceQuota we can easily apply the bare specification
-				if tenant.Spec.ResourceQuota.Scope == capsulev1beta1.ResourceQuotaScopeNamespace {
+				if tenant.Spec.ResourceQuota.Scope == api.ResourceQuotaScopeNamespace {
 					target.Spec.Hard = resQuota.Hard
 				}
 
@@ -233,8 +237,8 @@ func (r *Manager) resourceQuotasUpdate(ctx context.Context, resourceName corev1.
 						found.Annotations = make(map[string]string)
 					}
 					found.Labels = rq.Labels
-					found.Annotations[capsulev1beta1.UsedQuotaFor(resourceName)] = actual.String()
-					found.Annotations[capsulev1beta1.HardQuotaFor(resourceName)] = limit.String()
+					found.Annotations[capsulev1beta2.UsedQuotaFor(resourceName)] = actual.String()
+					found.Annotations[capsulev1beta2.HardQuotaFor(resourceName)] = limit.String()
 					// Updating the Resource according to the actual.Cmp result
 					found.Spec.Hard = rq.Spec.Hard
 

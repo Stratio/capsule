@@ -7,20 +7,21 @@ package e2e
 
 import (
 	"context"
-	. "github.com/onsi/ginkgo"
+
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
 )
 
 var _ = Describe("creating a Namespaces as different type of Tenant owners", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tenant-assigned",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "alice",
 					Kind: "User",
@@ -48,7 +49,7 @@ var _ = Describe("creating a Namespaces as different type of Tenant owners", fun
 	})
 
 	It("should be available in Tenant namespaces list and RoleBindings should be present when created", func() {
-		ns := NewNamespace("new-namespace-user")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 		TenantNamespaceList(tnt, defaultTimeoutInterval).Should(ContainElements(ns.GetName()))
 
@@ -57,7 +58,7 @@ var _ = Describe("creating a Namespaces as different type of Tenant owners", fun
 		}
 	})
 	It("should be available in Tenant namespaces list and RoleBindings should present when created as Group", func() {
-		ns := NewNamespace("new-namespace-group")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[1], defaultTimeoutInterval).Should(Succeed())
 		TenantNamespaceList(tnt, defaultTimeoutInterval).Should(ContainElements(ns.GetName()))
 
@@ -66,7 +67,7 @@ var _ = Describe("creating a Namespaces as different type of Tenant owners", fun
 		}
 	})
 	It("should be available in Tenant namespaces list and RoleBindings should present when created as ServiceAccount", func() {
-		ns := NewNamespace("new-namespace-sa")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[2], defaultTimeoutInterval).Should(Succeed())
 		TenantNamespaceList(tnt, defaultTimeoutInterval).Should(ContainElements(ns.GetName()))
 

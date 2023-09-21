@@ -8,20 +8,20 @@ package e2e
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
 )
 
 var _ = Describe("creating a Namespace without a Tenant selector when user owns multiple Tenants", func() {
-	t1 := &capsulev1beta1.Tenant{
+	t1 := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tenant-one",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "john",
 					Kind: "User",
@@ -29,12 +29,12 @@ var _ = Describe("creating a Namespace without a Tenant selector when user owns 
 			},
 		},
 	}
-	t2 := &capsulev1beta1.Tenant{
+	t2 := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tenant-two",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "john",
 					Kind: "User",
@@ -42,12 +42,12 @@ var _ = Describe("creating a Namespace without a Tenant selector when user owns 
 			},
 		},
 	}
-	t3 := &capsulev1beta1.Tenant{
+	t3 := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tenant-three",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "john",
 					Kind: "Group",
@@ -55,12 +55,12 @@ var _ = Describe("creating a Namespace without a Tenant selector when user owns 
 			},
 		},
 	}
-	t4 := &capsulev1beta1.Tenant{
+	t4 := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tenant-four",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "john",
 					Kind: "Group",
@@ -70,7 +70,7 @@ var _ = Describe("creating a Namespace without a Tenant selector when user owns 
 	}
 
 	It("should fail", func() {
-		ns := NewNamespace("fail-ns")
+		ns := NewNamespace("")
 		By("user owns 2 tenants", func() {
 			EventuallyCreation(func() error { return k8sClient.Create(context.TODO(), t1) }).Should(Succeed())
 			EventuallyCreation(func() error { return k8sClient.Create(context.TODO(), t2) }).Should(Succeed())

@@ -12,33 +12,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	capsulev1alpha1 "github.com/clastix/capsule/api/v1alpha1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
 	"github.com/clastix/capsule/controllers/utils"
 	"github.com/clastix/capsule/pkg/configuration"
 )
 
 type Manager struct {
-	Log    logr.Logger
-	Client client.Client
-}
+	client client.Client
 
-// InjectClient injects the Client interface, required by the Runnable interface.
-func (c *Manager) InjectClient(client client.Client) error {
-	c.Client = client
-
-	return nil
+	Log logr.Logger
 }
 
 func (c *Manager) SetupWithManager(mgr ctrl.Manager, configurationName string) error {
+	c.client = mgr.GetClient()
+
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&capsulev1alpha1.CapsuleConfiguration{}, utils.NamesMatchingPredicate(configurationName)).
+		For(&capsulev1beta2.CapsuleConfiguration{}, utils.NamesMatchingPredicate(configurationName)).
 		Complete(c)
 }
 
 func (c *Manager) Reconcile(ctx context.Context, request reconcile.Request) (res reconcile.Result, err error) {
 	c.Log.Info("CapsuleConfiguration reconciliation started", "request.name", request.Name)
 
-	cfg := configuration.NewCapsuleConfiguration(ctx, c.Client, request.Name)
+	cfg := configuration.NewCapsuleConfiguration(ctx, c.client, request.Name)
 	// Validating the Capsule Configuration options
 	if _, err = cfg.ProtectedNamespaceRegexp(); err != nil {
 		panic(errors.Wrap(err, "Invalid configuration for protected Namespace regex"))

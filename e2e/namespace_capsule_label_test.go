@@ -8,22 +8,22 @@ package e2e
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
 )
 
 var _ = Describe("creating several Namespaces for a Tenant", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "capsule-labels",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "charlie",
 					Kind: "User",
@@ -44,9 +44,9 @@ var _ = Describe("creating several Namespaces for a Tenant", func() {
 
 	It("should contains the default Capsule label", func() {
 		namespaces := []*v1.Namespace{
-			NewNamespace("first-capsule-ns"),
-			NewNamespace("second-capsule-ns"),
-			NewNamespace("third-capsule-ns"),
+			NewNamespace(""),
+			NewNamespace(""),
+			NewNamespace(""),
 		}
 		for _, ns := range namespaces {
 			NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())

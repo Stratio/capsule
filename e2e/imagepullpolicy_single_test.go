@@ -8,27 +8,28 @@ package e2e
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
+	"github.com/clastix/capsule/pkg/api"
 )
 
 var _ = Describe("enforcing a defined ImagePullPolicy", func() {
-	tnt := &capsulev1beta1.Tenant{
+	tnt := &capsulev1beta2.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "image-pull-policy",
 		},
-		Spec: capsulev1beta1.TenantSpec{
-			Owners: capsulev1beta1.OwnerListSpec{
+		Spec: capsulev1beta2.TenantSpec{
+			Owners: capsulev1beta2.OwnerListSpec{
 				{
 					Name: "axel",
 					Kind: "User",
 				},
 			},
-			ImagePullPolicies: []capsulev1beta1.ImagePullPolicySpec{"Always"},
+			ImagePullPolicies: []api.ImagePullPolicySpec{"Always"},
 		},
 	}
 
@@ -44,7 +45,7 @@ var _ = Describe("enforcing a defined ImagePullPolicy", func() {
 	})
 
 	It("should just allow the defined policy", func() {
-		ns := NewNamespace("allow-policies")
+		ns := NewNamespace("")
 		NamespaceCreation(ns, tnt.Spec.Owners[0], defaultTimeoutInterval).Should(Succeed())
 
 		cs := ownerClient(tnt.Spec.Owners[0])

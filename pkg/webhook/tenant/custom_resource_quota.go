@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
 	capsulewebhook "github.com/clastix/capsule/pkg/webhook"
 	"github.com/clastix/capsule/pkg/webhook/utils"
 )
@@ -25,18 +25,14 @@ type resourceCounterHandler struct {
 	client client.Client
 }
 
-func (r *resourceCounterHandler) InjectClient(c client.Client) error {
-	r.client = c
-
-	return nil
-}
-
-func ResourceCounterHandler() capsulewebhook.Handler {
-	return &resourceCounterHandler{}
+func ResourceCounterHandler(client client.Client) capsulewebhook.Handler {
+	return &resourceCounterHandler{
+		client: client,
+	}
 }
 
 func (r *resourceCounterHandler) getTenantName(ctx context.Context, clt client.Client, req admission.Request) (string, error) {
-	tntList := &capsulev1beta1.TenantList{}
+	tntList := &capsulev1beta2.TenantList{}
 
 	if err := clt.List(ctx, tntList, client.MatchingFieldsSelector{
 		Selector: fields.OneTermEqualSelector(".status.namespaces", req.Namespace),
@@ -67,7 +63,7 @@ func (r *resourceCounterHandler) OnCreate(clt client.Client, decoder *admission.
 
 		kgv := fmt.Sprintf("%s.%s_%s", req.Resource.Resource, req.Resource.Group, req.Resource.Version)
 
-		tnt := &capsulev1beta1.Tenant{}
+		tnt := &capsulev1beta2.Tenant{}
 
 		var limit int64
 
@@ -76,20 +72,20 @@ func (r *resourceCounterHandler) OnCreate(clt client.Client, decoder *admission.
 				return retryErr
 			}
 
-			if limit, retryErr = capsulev1beta1.GetLimitResourceFromTenant(*tnt, kgv); retryErr != nil {
-				if errors.As(err, &capsulev1beta1.NonLimitedResourceError{}) {
+			if limit, retryErr = capsulev1beta2.GetLimitResourceFromTenant(*tnt, kgv); retryErr != nil {
+				if errors.As(err, &capsulev1beta2.NonLimitedResourceError{}) {
 					return nil
 				}
 
 				return err
 			}
-			used, _ := capsulev1beta1.GetUsedResourceFromTenant(*tnt, kgv)
+			used, _ := capsulev1beta2.GetUsedResourceFromTenant(*tnt, kgv)
 
 			if used >= limit {
 				return NewCustomResourceQuotaError(kgv, limit)
 			}
 
-			tnt.Annotations[capsulev1beta1.UsedAnnotationForResource(kgv)] = fmt.Sprintf("%d", used+1)
+			tnt.Annotations[capsulev1beta2.UsedAnnotationForResource(kgv)] = fmt.Sprintf("%d", used+1)
 
 			return clt.Update(ctx, tnt)
 		})
@@ -122,7 +118,7 @@ func (r *resourceCounterHandler) OnDelete(clt client.Client, decoder *admission.
 		kgv := fmt.Sprintf("%s.%s_%s", req.Resource.Resource, req.Resource.Group, req.Resource.Version)
 
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() (retryErr error) {
-			tnt := &capsulev1beta1.Tenant{}
+			tnt := &capsulev1beta2.Tenant{}
 			if retryErr = clt.Get(ctx, types.NamespacedName{Name: tntName}, tnt); err != nil {
 				return
 			}
@@ -131,13 +127,13 @@ func (r *resourceCounterHandler) OnDelete(clt client.Client, decoder *admission.
 				return
 			}
 
-			if _, ok := tnt.Annotations[capsulev1beta1.UsedAnnotationForResource(kgv)]; !ok {
+			if _, ok := tnt.Annotations[capsulev1beta2.UsedAnnotationForResource(kgv)]; !ok {
 				return
 			}
 
-			used, _ := capsulev1beta1.GetUsedResourceFromTenant(*tnt, kgv)
+			used, _ := capsulev1beta2.GetUsedResourceFromTenant(*tnt, kgv)
 
-			tnt.Annotations[capsulev1beta1.UsedAnnotationForResource(kgv)] = fmt.Sprintf("%d", used-1)
+			tnt.Annotations[capsulev1beta2.UsedAnnotationForResource(kgv)] = fmt.Sprintf("%d", used-1)
 
 			return clt.Update(ctx, tnt)
 		})

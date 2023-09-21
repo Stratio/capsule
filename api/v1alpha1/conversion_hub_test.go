@@ -16,28 +16,29 @@ import (
 	"k8s.io/utils/pointer"
 
 	capsulev1beta1 "github.com/clastix/capsule/api/v1beta1"
+	"github.com/clastix/capsule/pkg/api"
 )
 
-// nolint:maintidx
+//nolint:maintidx
 func generateTenantsSpecs() (Tenant, capsulev1beta1.Tenant) {
 	var namespaceQuota int32 = 5
 
 	nodeSelector := map[string]string{
 		"foo": "bar",
 	}
-	v1alpha1AdditionalMetadataSpec := &AdditionalMetadataSpec{
-		AdditionalLabels: map[string]string{
+	v1alpha1AdditionalMetadataSpec := &AdditionalMetadata{
+		Labels: map[string]string{
 			"foo": "bar",
 		},
-		AdditionalAnnotations: map[string]string{
+		Annotations: map[string]string{
 			"foo": "bar",
 		},
 	}
-	v1alpha1AllowedListSpec := &AllowedListSpec{
+	v1alpha1AllowedListSpec := &api.AllowedListSpec{
 		Exact: []string{"foo", "bar"},
 		Regex: "^foo*",
 	}
-	v1beta1AdditionalMetadataSpec := &capsulev1beta1.AdditionalMetadataSpec{
+	v1beta1AdditionalMetadataSpec := &api.AdditionalMetadataSpec{
 		Labels: map[string]string{
 			"foo": "bar",
 		},
@@ -49,20 +50,22 @@ func generateTenantsSpecs() (Tenant, capsulev1beta1.Tenant) {
 		Quota:              &namespaceQuota,
 		AdditionalMetadata: v1beta1AdditionalMetadataSpec,
 	}
-	v1beta1ServiceOptions := &capsulev1beta1.ServiceOptions{
+	v1beta1ServiceOptions := &api.ServiceOptions{
 		AdditionalMetadata: v1beta1AdditionalMetadataSpec,
-		AllowedServices: &capsulev1beta1.AllowedServices{
-			NodePort:     pointer.BoolPtr(false),
-			ExternalName: pointer.BoolPtr(false),
-			LoadBalancer: pointer.BoolPtr(false),
+		AllowedServices: &api.AllowedServices{
+			NodePort:     pointer.Bool(false),
+			ExternalName: pointer.Bool(false),
+			LoadBalancer: pointer.Bool(false),
 		},
-		ExternalServiceIPs: &capsulev1beta1.ExternalServiceIPsSpec{
-			Allowed: []capsulev1beta1.AllowedIP{"192.168.0.1"},
+		ExternalServiceIPs: &api.ExternalServiceIPsSpec{
+			Allowed: []api.AllowedIP{"192.168.0.1"},
 		},
 	}
-	v1beta1AllowedListSpec := &capsulev1beta1.AllowedListSpec{
-		Exact: []string{"foo", "bar"},
-		Regex: "^foo*",
+	v1beta2AllowedListSpec := &api.SelectorAllowedListSpec{
+		AllowedListSpec: api.AllowedListSpec{
+			Exact: []string{"foo", "bar"},
+			Regex: "^foo*",
+		},
 	}
 	networkPolicies := []networkingv1.NetworkPolicySpec{
 		{
@@ -234,25 +237,25 @@ func generateTenantsSpecs() (Tenant, capsulev1beta1.Tenant) {
 			},
 			NamespaceOptions: v1beta1NamespaceOptions,
 			ServiceOptions:   v1beta1ServiceOptions,
-			StorageClasses:   v1beta1AllowedListSpec,
+			StorageClasses:   &v1beta2AllowedListSpec.AllowedListSpec,
 			IngressOptions: capsulev1beta1.IngressOptions{
-				HostnameCollisionScope: capsulev1beta1.HostnameCollisionScopeDisabled,
-				AllowedClasses:         v1beta1AllowedListSpec,
-				AllowedHostnames:       v1beta1AllowedListSpec,
+				HostnameCollisionScope: api.HostnameCollisionScopeDisabled,
+				AllowedClasses:         &v1beta2AllowedListSpec.AllowedListSpec,
+				AllowedHostnames:       &v1beta2AllowedListSpec.AllowedListSpec,
 			},
-			ContainerRegistries: v1beta1AllowedListSpec,
+			ContainerRegistries: &v1beta2AllowedListSpec.AllowedListSpec,
 			NodeSelector:        nodeSelector,
-			NetworkPolicies: capsulev1beta1.NetworkPolicySpec{
+			NetworkPolicies: api.NetworkPolicySpec{
 				Items: networkPolicies,
 			},
-			LimitRanges: capsulev1beta1.LimitRangesSpec{
+			LimitRanges: api.LimitRangesSpec{
 				Items: limitRanges,
 			},
-			ResourceQuota: capsulev1beta1.ResourceQuotaSpec{
-				Scope: capsulev1beta1.ResourceQuotaScopeNamespace,
+			ResourceQuota: api.ResourceQuotaSpec{
+				Scope: api.ResourceQuotaScopeNamespace,
 				Items: resourceQuotas,
 			},
-			AdditionalRoleBindings: []capsulev1beta1.AdditionalRoleBindingsSpec{
+			AdditionalRoleBindings: []api.AdditionalRoleBindingsSpec{
 				{
 					ClusterRoleName: "crds-rolebinding",
 					Subjects: []rbacv1.Subject{
@@ -264,8 +267,8 @@ func generateTenantsSpecs() (Tenant, capsulev1beta1.Tenant) {
 					},
 				},
 			},
-			ImagePullPolicies: []capsulev1beta1.ImagePullPolicySpec{"Always", "IfNotPresent"},
-			PriorityClasses: &capsulev1beta1.AllowedListSpec{
+			ImagePullPolicies: []api.ImagePullPolicySpec{"Always", "IfNotPresent"},
+			PriorityClasses: &api.AllowedListSpec{
 				Exact: []string{"default"},
 				Regex: "^tier-.*$",
 			},
@@ -323,7 +326,7 @@ func generateTenantsSpecs() (Tenant, capsulev1beta1.Tenant) {
 			NetworkPolicies:     networkPolicies,
 			LimitRanges:         limitRanges,
 			ResourceQuota:       resourceQuotas,
-			AdditionalRoleBindings: []AdditionalRoleBindingsSpec{
+			AdditionalRoleBindings: []api.AdditionalRoleBindingsSpec{
 				{
 					ClusterRoleName: "crds-rolebinding",
 					Subjects: []rbacv1.Subject{
@@ -335,8 +338,8 @@ func generateTenantsSpecs() (Tenant, capsulev1beta1.Tenant) {
 					},
 				},
 			},
-			ExternalServiceIPs: &ExternalServiceIPsSpec{
-				Allowed: []AllowedIP{"192.168.0.1"},
+			ExternalServiceIPs: &api.ExternalServiceIPsSpec{
+				Allowed: []api.AllowedIP{"192.168.0.1"},
 			},
 		},
 		Status: TenantStatus{
