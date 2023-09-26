@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.3-0.1.0 (upcoming)
+## 0.3.3-0.5.0 (upcoming)
 
 * [EOS-11279] Bump Capsule upstream version to v0.3.3
 
