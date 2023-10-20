@@ -1,7 +1,10 @@
 # Changelog
 
-## 0.1.3-0.4.0 (2023-08-14)
+## 0.3.3-0.6.0 (upcoming)
 
+* [EOS-11279] Bump Capsule upstream version to v0.3.3
+
+## 0.1.3-0.4.0 (2023-08-14)
 
 * [EOS-11449] Add excludeUserGroups option
 * [EOS-11174] Bump Capsule upstream version to v0.1.3 
