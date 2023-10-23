@@ -9,7 +9,7 @@ import (
 	capsulev1beta2 "github.com/clastix/capsule/api/v1beta2"
 )
 
-func IsTenantOwner(owners capsulev1beta1.OwnerListSpec, userInfo authenticationv1.UserInfo, capsuleUserName string) bool {
+func IsTenantOwner(owners capsulev1beta2.OwnerListSpec, userInfo authenticationv1.UserInfo, capsuleUserName string) bool {
 	if userInfo.Username == capsuleUserName {
 		return true
 	}
