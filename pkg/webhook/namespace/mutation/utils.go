@@ -169,17 +169,6 @@ func getTenantByUserInfo(
 		return nil, &response
 	}
 
-	if len(tenants) == 1 {
-		// Check if namespace needs Tenant name prefix
-		if !validateNamespacePrefix(ns, &tenants[0]) {
-			response := admission.Denied(fmt.Sprintf("The Namespace name must start with '%s-' when ForceTenantPrefix is enabled in the Tenant.", tenants[0].GetName()))
-
-			return nil, &response
-		}
-
-		return &tenants[0], nil
-	}
-
 	if cfg.ForceTenantPrefix() {
 		for _, tnt := range tenants {
 			if strings.HasPrefix(ns.GetName(), fmt.Sprintf("%s-", tnt.GetName())) {
@@ -190,6 +179,17 @@ func getTenantByUserInfo(
 		response := admission.Denied("The Namespace prefix used doesn't match any available Tenant")
 
 		return nil, &response
+	}
+
+	if len(tenants) == 1 {
+		// Check if namespace needs Tenant name prefix
+		if !validateNamespacePrefix(ns, &tenants[0]) {
+			response := admission.Denied(fmt.Sprintf("The Namespace name must start with '%s-' when ForceTenantPrefix is enabled in the Tenant.", tenants[0].GetName()))
+
+			return nil, &response
+		}
+
+		return &tenants[0], nil
 	}
 
 	return nil, nil
