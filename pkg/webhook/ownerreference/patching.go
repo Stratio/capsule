@@ -222,7 +222,6 @@ func (h *handler) setOwnerRef(ctx context.Context, req admission.Request, client
 		return &response
 	}
 
-
 	if h.cfg.ForceTenantPrefix() {
 		for _, tnt := range tenants {
 			if strings.HasPrefix(ns.GetName(), fmt.Sprintf("%s-", tnt.GetName())) {
