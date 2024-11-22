@@ -5,8 +5,8 @@
 *.dll
 *.so
 *.dylib
-bin
 dist/
+target/
 
 # Test binary, build with `go test -c`
 *.test

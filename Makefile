@@ -310,3 +310,10 @@ SPELL_CHECKER = npx spellchecker-cli
 docs-lint:
 	cd docs/content && $(SPELL_CHECKER) -f "*.md" "*/*.md" "!general/crds-apis.md" -d dictionary.txt
 
+# Stratio CICD flow
+change-version:
+	bin/change-version.sh $(version)
+
+chart:
+	bin/chart.sh $(version)
+

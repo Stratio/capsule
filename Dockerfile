@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.20.10 as builder
+FROM golang:1.22.9-bookworm as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -32,9 +32,20 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on go build \
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM alpine:3.20
+# Upgrade packages for vulnerabilities
+RUN apk update && apk upgrade
+
 WORKDIR /
 COPY --from=builder /workspace/manager .
-USER nonroot:nonroot
+
+# add new user
+ARG USER=nonroot
+ENV HOME /home/$USER
+RUN adduser -D $USER \
+        && mkdir -p /etc/sudoers.d \
+        && echo "$USER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$USER \
+        && chmod 0440 /etc/sudoers.d/$USER
+USER $USER:$USER
 
 ENTRYPOINT ["/manager"]
