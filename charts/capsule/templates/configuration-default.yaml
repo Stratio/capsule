@@ -20,6 +20,10 @@ spec:
 {{- range .Values.manager.options.capsuleUserGroups }}
     - {{ . }}
 {{- end}}
+  excludeUserGroups:
+{{- range .Values.manager.options.capsuleExcludeUserGroups }}
+    - {{ . }}
+{{- end}}
   protectedNamespaceRegex: {{ .Values.manager.options.protectedNamespaceRegex | quote }}
   {{- with .Values.manager.options.nodeMetadata }}
   nodeMetadata:

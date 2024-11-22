@@ -85,6 +85,10 @@ func (c *capsuleConfiguration) UserGroups() []string {
 	return c.retrievalFn().Spec.UserGroups
 }
 
+func (c *capsuleConfiguration) ExcludeUserGroups() []string {
+	return c.retrievalFn().Spec.ExcludeUserGroups
+}
+
 func (c *capsuleConfiguration) ForbiddenUserNodeLabels() *capsuleapi.ForbiddenListSpec {
 	if c.retrievalFn().Spec.NodeMetadata == nil {
 		return nil

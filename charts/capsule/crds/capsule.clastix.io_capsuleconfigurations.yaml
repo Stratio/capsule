@@ -124,6 +124,11 @@ spec:
                 items:
                   type: string
                 type: array
+              excludeUserGroups:
+                description: Names of the groups for Capsule users to exclude.
+                items:
+                  type: string
+                type: array
             required:
             - enableTLSReconciler
             type: object
