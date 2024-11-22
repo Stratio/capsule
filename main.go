@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	goRuntime "runtime"
+	"strings"
 
 	flag "github.com/spf13/pflag"
 	_ "go.uber.org/automaxprocs"
@@ -81,7 +82,7 @@ func printVersion() {
 func main() {
 	var enableLeaderElection, version bool
 
-	var metricsAddr, namespace, configurationName string
+	var metricsAddr, namespace, serviceAccountName, capsuleUserName, configurationName string
 
 	var webhookPort int
 
@@ -117,6 +118,13 @@ func main() {
 		setupLog.Error(fmt.Errorf("unable to determinate the Namespace Capsule is running on"), "unable to start manager")
 		os.Exit(1)
 	}
+
+	if serviceAccountName = os.Getenv("SERVICE_ACCOUNT_NAME"); len(serviceAccountName) == 0 {
+		setupLog.Error(fmt.Errorf("unable to determinate the Namespace Capsule is running on"), "unable to start manager")
+		os.Exit(1)
+	}
+
+	capsuleUserName = strings.Join([]string{"system:serviceaccount", namespace, serviceAccountName}, ":")
 
 	if len(configurationName) == 0 {
 		setupLog.Error(fmt.Errorf("missing CapsuleConfiguration resource name"), "unable to start manager")
@@ -220,14 +228,14 @@ func main() {
 	webhooksList := append(
 		make([]webhook.Webhook, 0),
 		route.Pod(pod.ImagePullPolicy(), pod.ContainerRegistry(), pod.PriorityClass(), pod.RuntimeClass()),
-		route.Namespace(utils.InCapsuleGroups(cfg, namespacewebhook.PatchHandler(), namespacewebhook.QuotaHandler(), namespacewebhook.FreezeHandler(cfg), namespacewebhook.PrefixHandler(cfg), namespacewebhook.UserMetadataHandler())),
+		route.Namespace(utils.InCapsuleGroups(cfg, namespacewebhook.PatchHandler(capsuleUserName), namespacewebhook.QuotaHandler(), namespacewebhook.FreezeHandler(cfg), namespacewebhook.PrefixHandler(cfg), namespacewebhook.UserMetadataHandler())),
 		route.Ingress(ingress.Class(cfg, kubeVersion), ingress.Hostnames(cfg), ingress.Collision(cfg), ingress.Wildcard()),
 		route.PVC(pvc.Validating(), pvc.PersistentVolumeReuse()),
 		route.Service(service.Handler()),
 		route.TenantResourceObjects(utils.InCapsuleGroups(cfg, tntresource.WriteOpsHandler())),
 		route.NetworkPolicy(utils.InCapsuleGroups(cfg, networkpolicy.Handler())),
 		route.Tenant(tenant.NameHandler(), tenant.RoleBindingRegexHandler(), tenant.IngressClassRegexHandler(), tenant.StorageClassRegexHandler(), tenant.ContainerRegistryRegexHandler(), tenant.HostnameRegexHandler(), tenant.FreezedEmitter(), tenant.ServiceAccountNameHandler(), tenant.ForbiddenAnnotationsRegexHandler(), tenant.ProtectedHandler(), tenant.MetaHandler()),
-		route.OwnerReference(utils.InCapsuleGroups(cfg, ownerreference.Handler(cfg))),
+		route.OwnerReference(utils.InCapsuleGroups(cfg, ownerreference.Handler(cfg,capsuleUserName))),
 		route.Cordoning(tenant.CordoningHandler(cfg), tenant.ResourceCounterHandler(manager.GetClient())),
 		route.Node(utils.InCapsuleGroups(cfg, node.UserMetadataHandler(cfg, kubeVersion))),
 		route.Defaults(defaults.Handler(cfg, kubeVersion)),
