@@ -45,8 +45,9 @@ func getNamespaceTenant(
 	req admission.Request,
 	cfg configuration.Configuration,
 	recorder record.EventRecorder,
+	capsuleUserName string,
 ) (*capsulev1beta2.Tenant, *admission.Response) {
-	tenant, errResponse := getTenantByLabels(ctx, client, ns, req, recorder)
+	tenant, errResponse := getTenantByLabels(ctx, client, ns, req, recorder, capsuleUserName)
 	if errResponse != nil {
 		return nil, errResponse
 	}
@@ -68,6 +69,7 @@ func getTenantByLabels(
 	ns *corev1.Namespace,
 	req admission.Request,
 	recorder record.EventRecorder,
+	capsuleUserName string,
 ) (*capsulev1beta2.Tenant, *admission.Response) {
 	ln, err := capsuleutils.GetTypeLabel(&capsulev1beta2.Tenant{})
 	if err != nil {
@@ -86,7 +88,7 @@ func getTenantByLabels(
 			return nil, &response
 		}
 		// Tenant owner must adhere to user that asked for NS creation
-		if !utils.IsTenantOwner(tnt.Spec.Owners, req.UserInfo) {
+		if !utils.IsTenantOwner(tnt.Spec.Owners, req.UserInfo, capsuleUserName) {
 			recorder.Eventf(tnt, corev1.EventTypeWarning, "NonOwnedTenant", "Namespace %s cannot be assigned to the current Tenant", ns.GetName())
 
 			response := admission.Denied("Cannot assign the desired namespace to a non-owned Tenant")

@@ -26,11 +26,13 @@ import (
 
 type ownerReferenceHandler struct {
 	cfg configuration.Configuration
+	capsuleUserName string
 }
 
-func OwnerReferenceHandler(cfg configuration.Configuration) capsulewebhook.Handler {
+func OwnerReferenceHandler(cfg configuration.Configuration, capsuleUserName string) capsulewebhook.Handler {
 	return &ownerReferenceHandler{
-		cfg: cfg,
+		cfg:             cfg,
+		capsuleUserName: capsuleUserName,
 	}
 }
 
@@ -116,7 +118,7 @@ func (h *ownerReferenceHandler) namespaceIsOwned(ns *corev1.Namespace, tenantLis
 				continue
 			}
 
-			if ownerRef.UID == tenant.UID && utils.IsTenantOwner(tenant.Spec.Owners, req.UserInfo) {
+			if ownerRef.UID == tenant.UID && utils.IsTenantOwner(tenant.Spec.Owners, req.UserInfo, h.capsuleUserName) {
 				return true
 			}
 		}
@@ -140,7 +142,7 @@ func (h *ownerReferenceHandler) setOwnerRef(ctx context.Context, req admission.R
 		return &response
 	}
 
-	tnt, errResponse := getNamespaceTenant(ctx, client, ns, req, h.cfg, recorder)
+	tnt, errResponse := getNamespaceTenant(ctx, client, ns, req, h.cfg, recorder, h.capsuleUserName)
 	if errResponse != nil {
 		return errResponse
 	}
