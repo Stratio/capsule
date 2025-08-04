@@ -9,7 +9,10 @@ import (
 	capsulev1beta2 "github.com/projectcapsule/capsule/api/v1beta2"
 )
 
-func IsTenantOwner(owners capsulev1beta2.OwnerListSpec, userInfo authenticationv1.UserInfo) bool {
+func IsTenantOwner(owners capsulev1beta2.OwnerListSpec, userInfo authenticationv1.UserInfo, capsuleUserName string) bool {
+	if userInfo.Username == capsuleUserName {
+		return true
+	}
 	for _, owner := range owners {
 		switch owner.Kind {
 		case capsulev1beta2.UserOwner, capsulev1beta2.ServiceAccountOwner:

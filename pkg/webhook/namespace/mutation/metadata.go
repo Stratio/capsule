@@ -20,11 +20,13 @@ import (
 
 type metadataHandler struct {
 	cfg configuration.Configuration
+	capsuleUserName string
 }
 
-func MetadataHandler(cfg configuration.Configuration) capsulewebhook.Handler {
+func MetadataHandler(cfg configuration.Configuration, capsuleUserName string) capsulewebhook.Handler {
 	return &metadataHandler{
 		cfg: cfg,
+		capsuleUserName: capsuleUserName,
 	}
 }
 
@@ -37,7 +39,7 @@ func (h *metadataHandler) OnCreate(client client.Client, decoder admission.Decod
 			return &response
 		}
 
-		tenant, errResponse := getNamespaceTenant(ctx, client, ns, req, h.cfg, recorder)
+		tenant, errResponse := getNamespaceTenant(ctx, client, ns, req, h.cfg, recorder, h.capsuleUserName)
 		if errResponse != nil {
 			return errResponse
 		}
