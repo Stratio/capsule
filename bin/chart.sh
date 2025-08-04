@@ -9,6 +9,7 @@ NAME="capsule"
 VERSION="${1}"
 echo VERSION: ${VERSION}
 echo "Building HELM3 chart for ${NAME} ${VERSION} version"
+echo "HELM3 version $(helm version)"
 
 # Creating a new dir in the CI build environment
 CHART_TEMP_DIR="target"
