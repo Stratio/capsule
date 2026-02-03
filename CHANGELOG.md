@@ -1,8 +1,11 @@
 # Changelog
 
-## 0.10.3-0.7.0 (upcoming)
+## 0.7.0 (upcoming)
 
 * [PLT-2590] Bump Capsule upstream version to v0.10.3
+* [PLT-3777] Feature: Adaptate to Semantic Versioning
+
+* Capsule upstream version: 0.10.3
 
 ## 0.3.3-0.6.0 (2023-10-30)
 

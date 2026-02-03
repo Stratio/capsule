@@ -10,6 +10,7 @@ hose {
     UPSTREAM_VERSION = '0.10.3'
     DEPLOYONPRS = true
     GRYPE_TEST = true
+    VERSIONING_TYPE = "semver"
 
     DEV = { config ->
         doDocker(conf:config, image:'capsule')
