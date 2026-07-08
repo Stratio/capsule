@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0 (upcoming)
+## 1.0.0 (2026-07-08)
 
 * [PLT-4328] Upgrade de Capsule
 * Capsule upstream version: 0.13.7
