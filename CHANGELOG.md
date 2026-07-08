@@ -1,13 +1,19 @@
 # Changelog
 
-## 1.0.0 (upcoming)
+## 1.1.0 (upcoming)
+
+* Pending changelog
+
+## Previous development
+
+### Branched to branch-1.0 (2026-07-08)
 
 * [PLT-4328] Upgrade de Capsule
 * Capsule upstream version: 0.13.7
 
 Based on projectcapsule/capsule v0.13.7 plus Stratio modifications.
 
-## Previous development
+
 
 ### Branched to branch-0.7 (2026-02-06)
 
