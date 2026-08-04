@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0 (2026-07-08)
+## 1.0.0 (2026-08-04)
 
 * [PLT-4570] Capsule: actualizar paquete crypto de 0.51.0 a 0.52.0
 * [PLT-4328] Upgrade de Capsule
