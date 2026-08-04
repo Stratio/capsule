@@ -2,6 +2,7 @@
 
 ## 1.0.0 (2026-07-08)
 
+* [PLT-4570] Capsule: actualizar paquete crypto de 0.51.0 a 0.52.0
 * [PLT-4328] Upgrade de Capsule
 * Capsule upstream version: 0.13.7
 
