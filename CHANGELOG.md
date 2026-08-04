@@ -2,7 +2,7 @@
 
 ## 1.1.0 (upcoming)
 
-* Pending changelog
+* [PLT-4570] Capsule: actualizar paquete crypto de 0.51.0 a 0.52.0
 
 ## Previous development
 
