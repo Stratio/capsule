@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.1 (upcoming)
+## 1.0.1 (2026-11-10)
 
 * [PLT-5268] Fix HIGH CVE-2026-4738 in zlib: no Dockerfile changes needed, rebuilding picks up zlib 1.4-r0, now published in the Alpine 3.22 stable repo, through the `apk upgrade` already present in the image
 
