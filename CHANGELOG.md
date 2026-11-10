@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 (upcoming)
+
+* [PLT-5268] Fix HIGH CVE-2026-4738 in zlib: no Dockerfile changes needed, rebuilding picks up zlib 1.4-r0, now published in the Alpine 3.22 stable repo, through the `apk upgrade` already present in the image
+
 ## 1.0.0 (2026-08-04)
 
 * [PLT-4570] Capsule: actualizar paquete crypto de 0.51.0 a 0.52.0
